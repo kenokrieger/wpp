@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "wpp"
+name = "zephyros"
 version = "0.0.1"
 authors = [
   { name="Keno Krieger", email="kriegerk@uni-bremen.de" },
@@ -18,5 +18,5 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/kenokrieger/wpp"
-Issues = "https://github.com/kenokrieger/wpp/issues"
+Homepage = "https://github.com/kenokrieger/zephyros"
+Issues = "https://github.com/kenokrieger/zephyros/issues"

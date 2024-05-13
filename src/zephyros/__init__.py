@@ -1,7 +1,8 @@
 """
-wpp is a package designed for predicting power output from wind turbines
-(or wind farms) using different methods ranging from physical power calculations
-to machine learning.
+zephyros, named after one of the Greek gods of wind,
+is a package designed for predicting power output from wind turbines
+(or wind farms) using different methods ranging from physical power
+calculations to machine learning.
 """
 # Copyright (C) 2024  Keno Krieger <kriegerk@uni-bremen.de>
 #
