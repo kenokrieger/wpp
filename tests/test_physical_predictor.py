@@ -26,13 +26,15 @@ REQUIRED_KEYS = ["temperature", "delta_t", "rotor_radius", "delta_r",
 KEY_TEST_CASES = [{k: None for k in REQUIRED_KEYS[:m]}
                   for m in range(0, len(REQUIRED_KEYS))]
 RHO_TEST_CASES = [
+    # each entry in the list contains a tuple of input objects
+    # and a tuple of the expected output objects.
     # float inputs
     [(-50.0, 0.0), (1.563, 0.0)],
     [(-25.0, 0.0), (1.404, 0.0)],
     [(0.0, 0.0), (1.275, 0.0)],
     [(25.0, 0.0), (1.168, 0.0)],
     [(49.99, 0.0), (1.078, 0.0)],
-    # np.ndarray for temperature uncertainty as float
+    # np.ndarray for temperature and uncertainty as float
     [(np.array([-50.0, -25.0, 0.0, 25.0, 49.99]), 0.0),
      (np.array([1.563, 1.404, 1.275, 1.168, 1.078]), np.array([0.0, 0.0, 0.0, 0.0, 0.0]))],
     # np.ndarray for temperature and uncertainty

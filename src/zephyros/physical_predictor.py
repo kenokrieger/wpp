@@ -28,8 +28,9 @@ def predict(x):
 
     Args:
         x(dict or pd.DataFrame): Parameters required for the calculation of
-            the power output. Required keys are:
-
+            the power output. Can either be a dictionary containing float or
+            time series data as numpy arrays, or a pandas DataFrame.
+            Required keys are:
                 - *temperature*: The temperature in Degree Celsius
                 - *delta_t*: The uncertainty of the temperature in Degree Celsius.
                 - *rotor_radius*: The rotor radius in m.
@@ -116,37 +117,19 @@ def _calculate_rho(temperature, delta_t):
 
     Args:
         temperature (float or np.ndarray or pd.Series): Temperature in Degree Celsius.
-        delta_t (float or np.ndarray or pd.Series): The uncertainty of the
-            temperature in Degree Celsius.
+        delta_t (float or pd.Series): The uncertainty of the temperature
+            in Degree Celsius.
 
     Returns:
         tuple: The calculated air density in kg/m^3 and the uncertainty in kg/m^3.
 
     """
     if isinstance(temperature, float):
-        rho, delta_rho = _calculate_single_rho(temperature, delta_t)
-    elif isinstance(temperature, np.ndarray) and isinstance(delta_t, float):
-        rho, delta_rho = np.empty(temperature.shape), np.empty(temperature.shape)
-        for i, t in enumerate(temperature):
-            rho[i], delta_rho[i] = _calculate_single_rho(t, delta_t)
-    elif isinstance(temperature, np.ndarray) and isinstance(delta_t, np.ndarray):
-        rho, delta_rho = np.empty(temperature.shape), np.empty(temperature.shape)
-        for i, (t, d_t) in enumerate(zip(temperature, delta_t)):
-            rho[i], delta_rho[i] = _calculate_single_rho(t, d_t)
-    elif isinstance(temperature, pd.Series) and isinstance(delta_t, float):
-        result = temperature.apply(lambda x: _calculate_single_rho(x, delta_t))
-        rho, delta_rho = zip(*result)
-        rho, delta_rho = pd.Series(rho), pd.Series(delta_rho)
-    elif isinstance(temperature, pd.Series) and isinstance(delta_t, pd.Series):
-        df = pd.DataFrame({"x": temperature, "ux": delta_t})
-        result = df.apply(lambda x: _calculate_single_rho(x["x"], x["ux"]), axis=1)
-        rho, delta_rho = zip(*result)
-        rho, delta_rho = pd.Series(rho), pd.Series(delta_rho)
-    else:
-        raise NotImplementedError(
-            "Unexpected combination of types of temperature and uncertainty"
-        )
-    return rho, delta_rho
+        return _calculate_single_rho(temperature, delta_t)
+    df = pd.DataFrame({"x": temperature, "ux": delta_t})
+    result = df.apply(lambda x: _calculate_single_rho(x["x"], x["ux"]), axis=1)
+    rho, delta_rho = zip(*result)
+    return pd.Series(rho), pd.Series(delta_rho)
 
 
 def _calculate_single_rho(temperature, delta_t):

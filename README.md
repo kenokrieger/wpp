@@ -19,6 +19,7 @@ in the  highest directory.
 ### Examples
 
 #### Example 1: Use the physical prediction method
+
 ```python
 import matplotlib.pyplot as plt
 
@@ -33,7 +34,7 @@ plt.plot(x.index, x["power_expected"], label="expected power")
 plt.plot(x.index, x["predicted_power"], label="predicted power")
 plt.fill_between(
     x.index, x["predicted_power"] + x["predicted_power_uncertainty"],
-    x["predicted_power"] - x["predicted_power_uncertainty"],
+             x["predicted_power"] - x["predicted_power_uncertainty"],
     color="orange", alpha=0.3, linewidth=0, label="uncertainty")
 plt.legend()
 ax.set_title("Power Prediction based on Physical Calculations")
@@ -48,7 +49,11 @@ plt.show()
 **IMPORTANT NOTICE: Test data required for some of the tests
 is not openly available!**
 
-Tests can be run by executing `python3 -m pytest` in the highest
+Tests can be run by executing 
+```bash
+python3 -m pytest
+```
+in the highest
 directory.
 
 ### License
