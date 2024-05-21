@@ -19,19 +19,19 @@ import pandas as pd
 import pytest
 from itertools import chain, combinations
 
-from zephyros.empirical_predictor import grow_tree
+from zephyros.empirical_predictor import learn_and_predict
 
 TEST_DATA = "./tests/test_data/test_data.csv"
 TREE_TEST_CASES = [chain.from_iterable(
     combinations(["wind_speed", "temperature", "delta_v", "delta_t"], r)
     for r in range(5))
 ][1:]  # remove empty list from test cases
-TREE_TEST_ACCURACIES = list(range(1, 11))
+TREE_TEST_ACCURACIES = list(range(1, 50, 10))
 
 
 @pytest.mark.parametrize('test_case', TREE_TEST_CASES)
 @pytest.mark.parametrize('acc', TREE_TEST_ACCURACIES)
-def test_grow_tree(test_case, acc):
+def test_learn_and_predict(test_case, acc):
     """
     Test the grow_tree function from the zephyros.empirical_predictor module.
 
@@ -41,8 +41,7 @@ def test_grow_tree(test_case, acc):
 
     """
     x = pd.read_csv(TEST_DATA)
-    y, uy = grow_tree(x, test_case,"power_measured", acc)
-    # expected four paths, four values
-    print(y)
-    print(uy)
-    assert len(y) == 8
+    y = learn_and_predict(x, test_case, "power_measured", acc)
+    name = "".join((t[0] for t in test_case)) + str(acc) + ".csv"
+    y.to_csv(name)
+    assert y == 1
