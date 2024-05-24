@@ -22,26 +22,31 @@ from itertools import chain, combinations
 from zephyros.empirical_predictor import learn_and_predict
 
 TEST_DATA = "./tests/test_data/test_data.csv"
-TREE_TEST_CASES = [chain.from_iterable(
+TREE_TEST_CASES = list(chain.from_iterable(
     combinations(["wind_speed", "temperature", "delta_v", "delta_t"], r)
-    for r in range(5))
-][1:]  # remove empty list from test cases
-TREE_TEST_ACCURACIES = list(range(1, 50, 10))
+    for r in range(1, 5))
+)
+TREE_TEST_ACCURACIES = [1, 2, 3, 4, 8, 16]
 
 
 @pytest.mark.parametrize('test_case', TREE_TEST_CASES)
 @pytest.mark.parametrize('acc', TREE_TEST_ACCURACIES)
 def test_learn_and_predict(test_case, acc):
     """
-    Test the grow_tree function from the zephyros.empirical_predictor module.
+    Test the learn_and_predict method from the zephyros.empirical_predictor
+    module.
 
     Args:
-        test_case(iterable): The features to use for the tree creation.
-        acc(int): The accuracy of the tree.
+        test_case(iterable): The features to use for the prediction.
+        acc(int): The accuracy of the prediction.
 
     """
     x = pd.read_csv(TEST_DATA)
-    y = learn_and_predict(x, test_case, "power_measured", acc)
-    name = "".join((t[0] for t in test_case)) + str(acc) + ".csv"
-    y.to_csv(name)
-    assert y == 1
+    learn_data = x.loc[:166_000]
+    predict_data = x.loc[166_000:]
+    y = learn_and_predict(learn_data, predict_data,
+                          test_case, "power_measured", acc)
+    name = f"./tests/test_data/{'_'.join((t for t in test_case))}_{acc}.csv"
+    expected = pd.read_csv(name)
+    assert (np.allclose(y["predicted"], expected["predicted"], rtol=0.02) and
+            np.allclose(y["uncertainty"], expected["uncertainty"], rtol=0.02))

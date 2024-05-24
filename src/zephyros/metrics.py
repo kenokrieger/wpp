@@ -39,3 +39,7 @@ def uncertainty_quality(actual, predicted, uncertainty):
     # small positive is good
     # large negative is bad
     return np.sum(difference)
+
+
+def rmse(x, y):
+    return np.sqrt(np.mean((x - y) ** 2))

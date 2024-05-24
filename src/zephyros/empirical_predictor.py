@@ -1,7 +1,6 @@
 """
 Module for empirical prediction of the estimated power output of a wind turbine.
 """
-import numpy as np
 # Copyright (C) 2024  Keno Krieger <kriegerk@uni-bremen.de>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -15,8 +14,10 @@ import numpy as np
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-import pandas as pd
 from copy import deepcopy
+
+import numpy as np
+import pandas as pd
 
 
 def learn_and_predict(learn_data, predict_data, features, target, accuracy=3):
@@ -34,7 +35,7 @@ def learn_and_predict(learn_data, predict_data, features, target, accuracy=3):
         features(list): Column names of the features. The order is important as
             it determines which feature is used for which split, e.g. the first
             feature is used for the first split and so on.
-        target(list): Column name(s) of the target variable of the prediction.
+        target(str): Column name of the target variable of the prediction.
         accuracy(int): The number of splits to perform for each feature.
 
     Returns:
@@ -60,11 +61,10 @@ def predict(learned, x):
     """
     features = learned.index.names
     target = list(learned.keys())
-    _catch_missing_keys(x, features + target)
+    _catch_missing_keys(x, features)
     prediction = x.apply(_predict_row, axis="columns",
                          args=(learned, features, target))
-    return pd.DataFrame(prediction.to_list(),
-                        columns=target,
+    return pd.DataFrame(prediction.to_list(), columns=target,
                         index=prediction.index)
 
 
@@ -72,7 +72,7 @@ def learn(x, features, target, accuracy=3):
     """
     Create a multiindex DataFrame that contains the average value of *target*
     for intervals of each feature from *features*. The accuracy determines the
-    number of intervals for each feature.
+    number of intervals/splits for each feature.
 
     Args:
         x(pd.DataFrame): A DataFrame containing columns with *features* and a
@@ -84,14 +84,48 @@ def learn(x, features, target, accuracy=3):
         accuracy(int): The number of intervals for each feature.
 
     Returns:
-        pd.DataFrame: A multiindex DataFrame where each index is an
-            IntervalIndex for a feature from *features*.
+        pd.DataFrame: A multiindex DataFrame containing the target variable
+            under the key 'predicted' and its uncertainty under 'uncertainty'.
 
     """
-    branches, leaf_values = grow_tree(x, iter(features), target, accuracy)
-    multi_index = pd.MultiIndex.from_tuples(branches, names=features)
-    return pd.DataFrame(data=leaf_values, columns=["power", "delta_p"],
-                        index=multi_index)
+    _catch_accuracy_to_high(x, features, accuracy)
+    paths, path_values = grow_tree(x, iter(features), target, accuracy)
+    multi_index = pd.MultiIndex.from_tuples(paths, names=features)
+    learned = pd.DataFrame(data=path_values, columns=["predicted", "uncertainty"],
+                           index=multi_index)
+    if learned.isnull().values.any():
+        print("WARNING: Resulting dataframe contains NaN values. This might "
+              "be due to a fine splitting, i.e. high accuracy or many "
+              "features.")
+    return learned
+
+
+def _catch_accuracy_to_high(x, features, accuracy):
+    """
+    Check if the desired accuracy in combination with the number of features
+    can be achieved and raises a ValueError if the combination is impossible.
+
+    Args:
+        x(pd.DataFrame): The DataFrame to serve as data for the learning
+            process.
+        features(list): The features used for the learning.
+        accuracy(int): The requested accuracy, i.e. number of splits.
+
+    Raises:
+        ValueError: If the requested combination of accuracy and number of
+            features is impossible to achieve.
+
+    """
+    nrows = x.shape[0]
+    fragmentation = accuracy ** len(features)
+
+    if fragmentation >= nrows:
+        raise ValueError(f"The request accuracy ({accuracy}) in combination " 
+                         f"with the number of features ({len(features)})"
+                         "is to high!\n"
+                         f"pow(accuracy, len(features) = {fragmentation} "
+                         f"needs to be smaller than the number of rows in the "
+                         f"data x.shape[0] = {nrows}")
 
 
 def _catch_missing_keys(x, required):
@@ -117,9 +151,38 @@ def _catch_missing_keys(x, required):
             missing.append(key)
 
     if missing:
-        err_msg = "Missing required keys for calculation:\n"
+        err_msg = "Missing required keys for calculation: "
         err_msg += ", ".join(missing)
         raise KeyError(err_msg)
+
+
+def myloc(learned, feature_values):
+    """
+    Custom implementation of pandas DataFrame.loc method. Indexing a Multiindex
+    containing IntervalIndices has known bugs. This implementation circumvents
+    using the DataFrame.loc method.
+
+    Iteratively filter the index of *learned* by selecting the intervals
+    containing the combination of *feature_values*. If the values are out of
+    bound map them to the nearest interval instead. Return the combination
+    of intervals containing *feature_values*.
+
+    Args:
+        learned(pd.DataFrame): The DataFrame to index.
+        feature_values(list): Values to search for at each index level
+            respectively.
+
+    Returns:
+        tuple: The intervals containing the matching *feature_values*.
+
+    """
+    mask = learned.index
+    for i, fv in enumerate(feature_values):
+        new_mask = [mi for mi in mask if fv in mi[i]]
+        if not new_mask:
+            new_mask = _handle_out_of_bounds(fv, i, mask)
+        mask = new_mask
+    return mask[0]
 
 
 def _predict_row(row, learned, features, target):
@@ -134,44 +197,41 @@ def _predict_row(row, learned, features, target):
             intervals. If a feature is out of bound of the historic values, use
             the nearest existing interval.
         features(list): A list of column names to use for the prediction.
-        target(list): A list of column names of the desired prediction value(s).
+        target(str): The column name of the desired prediction value.
 
     Returns:
         list: The predicted value(s) given the features.
 
     """
     feature_values = tuple(row[f] for f in features)
-    # tuple indexing (learned.loc[feature_values]) does not always work
-    # this iterative approach does always work
-    for i, fv in enumerate(feature_values):
-        try:
-            learned = learned.loc[fv]
-        except KeyError:
-            learned = _handle_out_of_bounds(fv, i, learned)
-    return learned[target].values
+    # tuple indexing (learned.loc[feature_values]) does not work if values are
+    # out of bounds of the intervals
+    # this iterative approach works more reliably
+    index = myloc(learned, feature_values)
+    for loc in index:
+        learned = learned.loc[loc]
+    return learned.values.reshape((2, ))
 
 
-def _handle_out_of_bounds(fv, i, learned):
+def _handle_out_of_bounds(fv, level, mask):
     """
     Projects out of bounds feature value *fv* to the nearest existing interval.
     Args:
         fv(float): The value of a feature.
-        i(int): Level of the multiindex at which the out-of-bounds feature was
-            found.
-        learned(pd.DataFrame): A DataFrame containing a MultiIntervalIndex.
+        level(int): Level of the MultiIndex.
+        mask(list): A list containing IntervalIndices.
 
     Returns:
-        pd.DataFrame: The nearest existing value.
+        list: The *mask* with the interval closest to *fv*.
 
     """
-    index = learned.index.get_level_values(i)
-    lower_bound = index.min()
-    upper_bound = index.max()
+    lower_bound = np.min([mi[level] for mi in mask])
+    upper_bound = np.max([mi[level] for mi in mask])
     if _out_of_bounds_left(fv, lower_bound):
-        learned = learned.loc[lower_bound]
+        mask = [mi for mi in mask if mi[level] == lower_bound]
     else:
-        learned = learned.loc[upper_bound]
-    return learned
+        mask = [mi for mi in mask if mi[level] == upper_bound]
+    return mask
 
 
 def _out_of_bounds_left(v, interval):
@@ -207,10 +267,10 @@ def grow_tree(x, by, target, accuracy):
         tuple: The index and mean and standard deviation of the target variable.
 
     """
-    return _grow_tree(x, by, target, accuracy)
+    return _grow_tree(x, by, target, accuracy, [], [], [])
 
 
-def _grow_tree(x, by, target, accuracy, path=[], paths_out=[], values_out=[]):
+def _grow_tree(x, by, target, accuracy, path, paths_out, values_out):
     """
     Given column names '*by*', group data in a DataFrame recursively by those
     column's values and return the index and the mean and standard deviation
