@@ -21,7 +21,7 @@ import pytest
 from zephyros.physical_predictor import predict, _catch_missing_keys, _calculate_rho
 
 REQUIRED_KEYS = ["temperature", "delta_t", "rotor_radius", "delta_r",
-                 "power_coefficient", "delta_c", "wind_speed", "delta_v",
+                 "capacity_factor", "delta_c", "wind_speed", "delta_v",
                  "nominal_power"]
 KEY_TEST_CASES = [{k: None for k in REQUIRED_KEYS[:m]}
                   for m in range(0, len(REQUIRED_KEYS))]
@@ -116,5 +116,5 @@ def test_predict(test_case):
     """
     x = pd.read_csv(test_case)
     y, uy = predict(x)
-    assert (np.allclose(y, x["power_expected"], rtol=0.02) and
-            np.allclose(uy, x["delta_power_expected"], rtol=0.02))
+    assert (np.allclose(y, x["physical_power"], rtol=0.02) and
+            np.allclose(uy, x["delta_physical_p"], rtol=0.02))

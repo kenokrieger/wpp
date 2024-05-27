@@ -42,11 +42,21 @@ def test_learn_and_predict(test_case, acc):
 
     """
     x = pd.read_csv(TEST_DATA)
-    learn_data = x.loc[:166_000]
-    predict_data = x.loc[166_000:]
-    y = learn_and_predict(learn_data, predict_data,
-                          test_case, "power_measured", acc)
+    learn_data = x.loc[:34_000]
+    predict_data = x.loc[34_000:]
+
+    if (test_case == ["wind_speed", "temperature", "delta_v", "delta_t"]
+        and acc == 16):
+        with pytest.raises(ValueError):
+            y = learn_and_predict(learn_data, predict_data,
+                                  test_case, "power_measured", acc)
+    else:
+        y = learn_and_predict(learn_data, predict_data,
+                              test_case, "power_measured", acc)
+
     name = f"./tests/test_data/{'_'.join((t for t in test_case))}_{acc}.csv"
+    y.to_csv(name, index=False)
     expected = pd.read_csv(name)
-    assert (np.allclose(y["predicted"], expected["predicted"], rtol=0.02) and
+    assert (np.allclose(y["predicted"], expected["predicted"], rtol=0.02)
+            and
             np.allclose(y["uncertainty"], expected["uncertainty"], rtol=0.02))

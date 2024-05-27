@@ -1,6 +1,5 @@
 .idea/
-tests/test_data/*.csv
 */__pycache__/
 */*/__pycache__/
 examples.py
-
+*.py

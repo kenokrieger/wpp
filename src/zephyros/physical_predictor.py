@@ -23,7 +23,7 @@ def predict(x):
     """
     Perform physical calculations to predict the power output of a wind turbine
     given ambient temperature $T$ in Degree Celsius, rotor radius $R$ in m,
-    power coefficient $c_p$, wind speed $v$ in m/s, nominal power $P_max$ in kW
+    capacity factor $c_p$, wind speed $v$ in m/s, nominal power $P_max$ in kW
     and their respective uncertainties.
 
     Args:
@@ -35,8 +35,8 @@ def predict(x):
                 - *delta_t*: The uncertainty of the temperature in Degree Celsius.
                 - *rotor_radius*: The rotor radius in m.
                 - *delta_r*: The uncertainty of the rotor radius in m.
-                - *power coefficient*: The power coefficient.
-                - *delta_c*: The uncertainty of the power coefficient.
+                - *capacity_factor*: The capacity factor.
+                - *delta_c*: The uncertainty of the capacity factor..
                 - *wind_speed*: The wind speed at hub height in m/s.
                 - *delta_v*: The uncertainty of the wind speed in m/s.
                 - *nominal_power*: The nominal power of the turbine in kW.
@@ -47,10 +47,10 @@ def predict(x):
     """
     _catch_missing_keys(x)
     rho, delta_rho = _calculate_rho(x["temperature"], x["delta_t"])
-    power = _calculate_power(x["rotor_radius"], x["power_coefficient"],
+    power = _calculate_power(x["rotor_radius"], x["capacity_factor"],
                              rho, x["wind_speed"], x["nominal_power"])
     delta_power = _calculate_delta_power(
-        x["rotor_radius"], x["power_coefficient"], rho, x["wind_speed"],
+        x["rotor_radius"], x["capacity_factor"], rho, x["wind_speed"],
         x["delta_r"], x["delta_c"], delta_rho, x["delta_v"]
     )
     return power, delta_power
@@ -69,8 +69,8 @@ def _catch_missing_keys(x):
                 - *delta_t*: The uncertainty of the temperature in Degree Celsius.
                 - *rotor_radius*: The rotor radius in m.
                 - *delta_r*: The uncertainty of the rotor radius in m.
-                - *power coefficient*: The power coefficient.
-                - *delta_c*: The uncertainty of the power coefficient.
+                - *capacity_factor*: The capacity factor.
+                - *delta_c*: The uncertainty of the capacity factor.
                 - *wind_speed*: The wind speed at hub height in m/s.
                 - *delta_v*: The uncertainty of the wind speed in m/s.
                 - *nominal_power*: The nominal power of the turbine in kW.
@@ -87,8 +87,8 @@ def _catch_missing_keys(x):
         "delta_t": "'delta_t' - The uncertainty of the temperature in Degree Celsius.",
         "rotor_radius": "'rotor_radius' - The rotor radius in m.",
         "delta_r": "'delta_r' - The uncertainty of the rotor radius in m.",
-        "power_coefficient": "'power coefficient' - The power coefficient.",
-        "delta_c": "'delta_c' - The uncertainty of the power coefficient.",
+        "capacity_factor": "'capacity_factor' - The capacity factor.",
+        "delta_c": "'delta_c' - The uncertainty of the capacity factor.",
         "wind_speed": "'wind_speed' - The wind speed at hub height in m/s.",
         "delta_v": "'delta_v' - The uncertainty of the wind speed in m/s.",
         "nominal_power": "'nominal_power' - The nominal power of the turbine in kW"
@@ -173,7 +173,7 @@ def _calculate_single_rho(temperature, delta_t):
     return rho, delta_rho
 
 
-def _calculate_power(rotor_radius, power_coefficient, air_density, wind_speed,
+def _calculate_power(rotor_radius, capacity_factor, air_density, wind_speed,
                      nominal_power):
     """
     Calculate the power output with the formula given in reference [1].
@@ -184,7 +184,7 @@ def _calculate_power(rotor_radius, power_coefficient, air_density, wind_speed,
 
     Args:
         rotor_radius(float): The radius $R$ of the turbine's blades in m.
-        power_coefficient(float or np.ndarray or pd.Series): The power coefficient $c_p$.
+        capacity_factor(float or np.ndarray or pd.Series): The capacity factor $c_p$.
         air_density(float or np.ndarray or pd.Series): The air density $\rho$ in kg/m^3.
         wind_speed(float or np.ndarray or pd.Series): The wind speed $v$ in m/s.
         nominal_power(float): The nominal power of the wind turbine in kW.
@@ -195,7 +195,7 @@ def _calculate_power(rotor_radius, power_coefficient, air_density, wind_speed,
 
     """
     wind_area = np.pi * rotor_radius ** 2
-    power = 1 / 2 * power_coefficient * air_density * wind_area * wind_speed ** 3
+    power = 1 / 2 * capacity_factor * air_density * wind_area * wind_speed ** 3
     # convert W to kW
     power /= 1_000
     if isinstance(power, float):
@@ -205,7 +205,7 @@ def _calculate_power(rotor_radius, power_coefficient, air_density, wind_speed,
     return power
 
 
-def _calculate_delta_power(rotor_radius, power_coefficient, air_density,
+def _calculate_delta_power(rotor_radius, capacity_factor, air_density,
                            wind_speed, delta_r, delta_c, delta_rho, delta_v):
     """
     Calculate the uncertainty of the power output prediction using the rules
@@ -213,7 +213,7 @@ def _calculate_delta_power(rotor_radius, power_coefficient, air_density,
 
     Args:
         rotor_radius(float): The radius $R$ of the turbine's blades in m.
-        power_coefficient(float or np.ndarray or pd.Series): The power coefficient $c_p$.
+        capacity_factor(float or np.ndarray or pd.Series): The capacity factor $c_p$.
         air_density(float or np.ndarray or pd.Series): The air density $\rho$ in kg/m^3.
         wind_speed(float or np.ndarray or pd.Series): The wind speed $v$ in m/s.
         delta_r(float): The uncertainty of the rotor radius $R$ in m.
@@ -231,10 +231,10 @@ def _calculate_delta_power(rotor_radius, power_coefficient, air_density,
     """
     wind_area = np.pi * rotor_radius ** 2
     delta_power = (
-        delta_r * np.abs(np.pi * rotor_radius * power_coefficient * air_density * wind_speed ** 3)
+        delta_r * np.abs(np.pi * rotor_radius * capacity_factor * air_density * wind_speed ** 3)
     +   delta_c * np.abs(1 / 2 * air_density * wind_area * wind_speed ** 3)
-    +   delta_rho * np.abs(1 / 2 * power_coefficient * wind_area * wind_speed ** 3)
-    +   delta_v * np.abs(3 / 2 * power_coefficient * air_density * wind_area * wind_speed ** 2)
+    +   delta_rho * np.abs(1 / 2 * capacity_factor * wind_area * wind_speed ** 3)
+    +   delta_v * np.abs(3 / 2 * capacity_factor * air_density * wind_area * wind_speed ** 2)
     )
     # convert W to kW
     delta_power /= 1_000
