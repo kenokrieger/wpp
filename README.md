@@ -52,7 +52,8 @@ plt.show()
 ```python
 import matplotlib.pyplot as plt
 
-from zephyros.empirical_predictor import learn_and_predict
+from zephyros.empirical_predictor import (learn_and_predict, PREDICT_KEY, 
+                                          UNCERTAINTY_KEY)
 from zephyros.sample_data import get_sample_data
 
 x = get_sample_data()
@@ -73,10 +74,10 @@ print(y.index)
 # visualise the results
 fig, ax = plt.subplots()
 plt.plot(y.index, predict_data["power_measured"], label="expected power")
-plt.plot(y.index, y["predicted"], label="predicted power")
+plt.plot(y.index, y[PREDICT_KEY], label="predicted power")
 plt.fill_between(
-    y.index, y["predicted"] + y["uncertainty"],
-    y["predicted"] - y["uncertainty"],
+    y.index, y[PREDICT_KEY] + y[UNCERTAINTY_KEY],
+    y[PREDICT_KEY] - y[UNCERTAINTY_KEY],
     color="orange", alpha=0.3, linewidth=0, label="uncertainty")
 plt.legend()
 ax.set_title("Power Prediction based on Historically Measured Values")

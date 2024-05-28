@@ -126,12 +126,11 @@ def _calculate_rho(temperature, delta_t):
     """
     if isinstance(temperature, float):
         return _calculate_single_rho(temperature, delta_t)
-    index = None
-    if isinstance(temperature, pd.Series):
-        index = temperature.index
     df = pd.DataFrame({"x": temperature, "ux": delta_t})
     result = df.apply(lambda x: _calculate_single_rho(x["x"], x["ux"]), axis=1)
     rho, delta_rho = zip(*result)
+    # align index of in- and output if input is a pd.Series
+    index = temperature.index if isinstance(temperature, pd.Series) else None
     return pd.Series(rho, index=index), pd.Series(delta_rho, index=index)
 
 

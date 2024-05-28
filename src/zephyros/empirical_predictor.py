@@ -19,6 +19,9 @@ from copy import deepcopy
 import numpy as np
 import pandas as pd
 
+PREDICT_KEY = "predicted"
+UNCERTAINTY_KEY = "uncertainty"
+
 
 def learn_and_predict(learn_data, predict_data, features, target, accuracy=3):
     """
@@ -91,7 +94,8 @@ def learn(x, features, target, accuracy=3):
     _catch_accuracy_to_high(x, features, accuracy)
     paths, path_values = grow_tree(x, iter(features), target, accuracy)
     multi_index = pd.MultiIndex.from_tuples(paths, names=features)
-    learned = pd.DataFrame(data=path_values, columns=["predicted", "uncertainty"],
+    learned = pd.DataFrame(data=path_values,
+                           columns=[PREDICT_KEY, UNCERTAINTY_KEY],
                            index=multi_index)
     if learned.isnull().values.any():
         print("WARNING: Resulting dataframe contains NaN values. This might "
@@ -156,7 +160,7 @@ def _catch_missing_keys(x, required):
         raise KeyError(err_msg)
 
 
-def myloc(learned, feature_values):
+def _myloc(learned, feature_values):
     """
     Custom implementation of pandas DataFrame.loc method. Indexing a Multiindex
     containing IntervalIndices has known bugs. This implementation circumvents
@@ -169,7 +173,7 @@ def myloc(learned, feature_values):
 
     Args:
         learned(pd.DataFrame): The DataFrame to index.
-        feature_values(list): Values to search for at each index level
+        feature_values(iterable): Values to search for at each index level
             respectively.
 
     Returns:
@@ -207,7 +211,7 @@ def _predict_row(row, learned, features, target):
     # tuple indexing (learned.loc[feature_values]) does not work if values are
     # out of bounds of the intervals
     # this iterative approach works more reliably
-    index = myloc(learned, feature_values)
+    index = _myloc(learned, feature_values)
     for loc in index:
         learned = learned.loc[loc]
     return learned.values.reshape((2, ))
@@ -295,14 +299,14 @@ def _grow_tree(x, by, target, accuracy, path, paths_out, values_out):
         paths_out.append(path)
         values_out.append((x[target].mean(), x[target].std()))
     else:
-        new_x = split_dataframe(x, next_by, accuracy)
+        new_x = _split_dataframe(x, next_by, accuracy)
         for label, group in new_x:
             _grow_tree(group, deepcopy(by), target, accuracy, path + [label],
                        paths_out, values_out)
     return paths_out, values_out
 
 
-def split_dataframe(x, by, accuracy):
+def _split_dataframe(x, by, accuracy):
     """
     Split a DataFrame *x* into a group of equally sized dataframes based on
     values of a column "*by*". The accuracy determines the number of dataframes
