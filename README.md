@@ -26,14 +26,15 @@ import matplotlib.pyplot as plt
 from zephyros.physical_predictor import predict
 from zephyros.sample_data import get_sample_data
 
-x = get_sample_data()
+x = get_sample_data().sort_index()
+x = x.iloc[1_000:1_200]
 # calculate the expected power output of a wind turbine
 # based on wind speed, temperature and power coefficient
 x["predicted_power"], x["predicted_power_uncertainty"] = predict(x)
 
 # visualise the results
 fig, ax = plt.subplots()
-plt.plot(x.index, x["power_expected"], label="expected power")
+plt.plot(x.index, x["power_measured"], label="measured power")
 plt.plot(x.index, x["predicted_power"], label="predicted power")
 plt.fill_between(
     x.index, x["predicted_power"] + x["predicted_power_uncertainty"],
