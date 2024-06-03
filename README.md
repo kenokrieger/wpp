@@ -27,9 +27,10 @@ from zephyros.physical_predictor import predict
 from zephyros.sample_data import get_sample_data
 
 x = get_sample_data().sort_index()
-x = x.iloc[1_000:1_200]
+# use 200 sample values
+x = x.iloc[10_000:10_200]
 # calculate the expected power output of a wind turbine
-# based on wind speed, temperature and power coefficient
+# based on wind speed, temperature and capacity factor
 x["predicted_power"], x["predicted_power_uncertainty"] = predict(x)
 
 # visualise the results
@@ -70,7 +71,6 @@ features = ["wind_speed", "temperature"]
 target = "power_measured"
 y = learn_and_predict(learn_data, predict_data,
                       features, target, accuracy=12)
-print(y.index)
 # visualise the results
 fig, ax = plt.subplots()
 plt.plot(y.index, predict_data["power_measured"], label="expected power")

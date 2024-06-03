@@ -10,13 +10,14 @@ authors = [
 ]
 description = "A package for wind power prediction"
 readme = "README.md"
+license = "GPL-3.0-only"
 requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
 
 [project.urls]
-Homepage = "https://github.com/kenokrieger/zephyros"
-Issues = "https://github.com/kenokrieger/zephyros/issues"
+homepage = "https://github.com/kenokrieger/zephyros"
+repository = "https://github.com/kenokrieger/zephyros"
+issues = "https://github.com/kenokrieger/zephyros/issues"
