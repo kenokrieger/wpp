@@ -86,7 +86,75 @@ ax.set_ylabel("Power in kW")
 plt.show()
 ```
 
-### Example 3: Use Extreme Gradient Boosting (xgboost package)
+### Example 3: Use Support Vector Regression
+```python
+import matplotlib.pyplot as plt
+
+from zephyros.svm_predictor import learn_and_predict
+from zephyros.sample_data import get_sample_data
+
+x = get_sample_data()
+nrows = x.shape[0]
+# use 99.9 % of data for learning
+learn_predict_split = int(0.999 * nrows)
+learn_data = x.iloc[:learn_predict_split]
+predict_data = x.iloc[learn_predict_split:]
+# predict the power output of a wind turbine based on
+# historical values of wind speed and temperature
+# and the respective resulting power generation of
+# the turbine
+features = ["wind_speed", "temperature"]
+target = ["power_measured"]
+y = svm_predictor.learn_and_predict(learn_data, predict_data,
+                                    features, target)
+fig, ax = plt.subplots()
+plt.scatter(predict_data.index, predict_data["power_measured"],
+            label="expected power")
+plt.plot(predict_data.index, y, label="predicted power")
+plt.legend()
+ax.set_title("Power Prediction using SVR")
+ax.set_xlabel("Time index")
+ax.set_ylabel("Power in kW")
+plt.show()
+```
+
+### Example 4: Use Relevance Vector Regression
+```python
+import matplotlib.pyplot as plt
+
+from zephyros.rvm_predictor import learn_and_predict
+from zephyros.sample_data import get_sample_data
+
+# Use only a fraction of sample data to avoid memory issues
+x = get_sample_data().iloc[:2_000]
+nrows = x.shape[0]
+# use 99 % of data for learning
+learn_predict_split = int(0.95 * nrows)
+learn_data = x.iloc[:learn_predict_split]
+predict_data = x.iloc[learn_predict_split:]
+# predict the power output of a wind turbine based on
+# historical values of wind speed and temperature
+# and the respective resulting power generation of
+# the turbine
+features = ["wind_speed", "temperature"]
+target = ["power_measured"]
+y, std_y = learn_and_predict(learn_data, predict_data, features, target)
+
+fig, ax = plt.subplots()
+plt.scatter(predict_data.index, predict_data["power_measured"],
+            label="expected power")
+plt.plot(predict_data.index, y, label="predicted power")
+plt.fill_between(predict_data.index, y + std_y / 2, y - std_y / 2,
+                 color="orange", alpha=0.3, linewidth=0,
+                 label="uncertainty")
+plt.legend()
+ax.set_title("Power Prediction using RVM")
+ax.set_xlabel("Time index")
+ax.set_ylabel("Power in kW")
+plt.show()
+```
+
+### Example 5: Use Extreme Gradient Boosting (xgboost package)
 ```python
 import matplotlib.pyplot as plt
 
@@ -102,7 +170,7 @@ predict_data = x.iloc[learn_predict_split:]
 # predict the power output of a wind turbine based on
 # historical values of wind speed and temperature
 # and the respective resulting power generation of
-# the turbine
+# the turbine using extreme gradient boosting
 features = ["wind_speed", "temperature"]
 target = ["power_measured"]
 # predict with 16 cross validations
@@ -121,6 +189,12 @@ ax.set_title("Power Prediction using Extreme Gradient Boosting")
 ax.set_xlabel("Time index")
 ax.set_ylabel("Power in kW")
 plt.show()
+```
+
+### Example 6: Use Artificial Neural Networks...
+```python
+from future import FutureWarning
+FutureWarning("Not implemented yet.")
 ```
 
 ## Development
