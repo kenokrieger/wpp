@@ -86,6 +86,43 @@ ax.set_ylabel("Power in kW")
 plt.show()
 ```
 
+### Example 3: Use Extreme Gradient Boosting (xgboost package)
+```python
+import matplotlib.pyplot as plt
+
+from zephyros.boost_predictor import learn_and_predict
+from zephyros.sample_data import get_sample_data
+
+x = get_sample_data()
+nrows = x.shape[0]
+# use 99 % of data for learning
+learn_predict_split = int(0.99 * nrows)
+learn_data = x.iloc[:learn_predict_split]
+predict_data = x.iloc[learn_predict_split:]
+# predict the power output of a wind turbine based on
+# historical values of wind speed and temperature
+# and the respective resulting power generation of
+# the turbine
+features = ["wind_speed", "temperature"]
+target = ["power_measured"]
+# predict with 16 cross validations
+y, ly, uy = learn_and predict(learn_data, predict_data, features, target,
+                              xvalidate=16)
+# average the results of each cross validation
+y, ly, uy = y.mean(axis=0), ly.mean(axis=0), uy.mean(axis=0)
+# visualise the results
+fig, ax = plt.subplots()
+plt.plot(predict_data.index, predict_data["power_measured"], label="expected power")
+plt.plot(predict_data.index, y, label="predicted power")
+plt.fill_between(predict_data.index, uy, ly, color="orange", alpha=0.3, linewidth=0,
+                 label="uncertainty")
+plt.legend()
+ax.set_title("Power Prediction using Extreme Gradient Boosting")
+ax.set_xlabel("Time index")
+ax.set_ylabel("Power in kW")
+plt.show()
+```
+
 ## Development
 
 ### Tests
@@ -99,6 +136,10 @@ python3 -m pytest
 ```
 in the highest
 directory.
+
+Tests are only implemented for modules that contain large self implemented
+methods. Modules that only serve as API for well-tested packages 
+(e.g. boost_predictor.py) are not tested.
 
 ## License
 
