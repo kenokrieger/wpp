@@ -74,7 +74,7 @@ def learn(x, features, target, test_percentage=0.33, random_state=None):
     model.add(Dense(units=5, kernel_initializer='normal', activation='tanh'))
     model.add(Dense(1, kernel_initializer='normal'))
     model.compile(loss='mean_squared_error', optimizer='adam')
-    model.fit(x_train, y_train, batch_size=200, epochs=500, verbose=1)
+    model.fit(x_train, y_train, batch_size=200, epochs=5_000, verbose=1)
     return model
 
 

@@ -1,4 +1,4 @@
-# zephyros
+# <img src="https://raw.githubusercontent.com/kenokrieger/zephyros/master/LOGO.png" alt="zephyros" height=60>
 
 zephyros, named after one of the Greek gods of wind,
 is a package designed for predicting power output from wind turbines
