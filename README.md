@@ -191,10 +191,33 @@ ax.set_ylabel("Power in kW")
 plt.show()
 ```
 
-### Example 6: Use Artificial Neural Networks...
+### Example 6: Use Artificial Neural Networks
 ```python
-from future import FutureWarning
-FutureWarning("Not implemented yet.")
+import matplotlib.pyplot as plt
+
+from zephyros.ann_predictor import learn_and_predict
+from zephyros.sample_data import get_sample_data
+
+x = get_sample_data()
+nrows = x.shape[0]
+learn_predict_split = int(0.999 * nrows)
+learn_data = x.iloc[:learn_predict_split]
+predict_data = x.iloc[learn_predict_split:]
+features = ["wind_speed", "temperature"]
+target = ["power_measured"]
+y = ann_learn_and_predict(learn_data, predict_data, features, target,
+                          xvalidate=4)
+y = y.mean(axis=0)
+# visualise the results
+fig, ax = plt.subplots()
+plt.plot(predict_data.index, predict_data["power_measured"],
+         label="expected power")
+plt.plot(predict_data.index, y, label="predicted power")
+plt.legend()
+ax.set_title("Power Prediction with ANN")
+ax.set_xlabel("Time index")
+ax.set_ylabel("Power in kW")
+plt.show()
 ```
 
 ## Development
