@@ -24,27 +24,14 @@ in the  highest directory.
 import matplotlib.pyplot as plt
 
 from zephyros.physical_predictor import predict
-from zephyros.sample_data import get_sample_data
+from zephyros.examples import get_sample_data, plot_prediction
 
-x = get_sample_data().sort_index()
-# use 200 sample values
-x = x.iloc[10_000:10_200]
-# calculate the expected power output of a wind turbine
-# based on wind speed, temperature and capacity factor
-x["predicted_power"], x["predicted_power_uncertainty"] = predict(x)
-
-# visualise the results
-fig, ax = plt.subplots()
-plt.plot(x.index, x["power_measured"], label="measured power")
-plt.plot(x.index, x["predicted_power"], label="predicted power")
-plt.fill_between(
-    x.index, x["predicted_power"] + x["predicted_power_uncertainty"],
-             x["predicted_power"] - x["predicted_power_uncertainty"],
-    color="orange", alpha=0.3, linewidth=0, label="uncertainty")
-plt.legend()
-ax.set_title("Power Prediction based on Physical Calculations")
-ax.set_xlabel("Time index")
-ax.set_ylabel("Power in kW")
+# use 500 example values
+x = get_sample_data().iloc[10_000:10_500]
+y, uy = predict(x)
+fig, ax = plot_prediction(x.index, (y, y - uy, y + uy), x["power_measured"],
+                          title="Power Prediction based on Physical Calculations",
+                          xlabel="Time index", ylabel="Power in kW")
 plt.show()
 ```
 
@@ -53,36 +40,25 @@ plt.show()
 ```python
 import matplotlib.pyplot as plt
 
-from zephyros.empirical_predictor import (learn_and_predict, PREDICT_KEY, 
+from zephyros.empirical_predictor import (learn_and_predict, PREDICT_KEY,
                                           UNCERTAINTY_KEY)
-from zephyros.sample_data import get_sample_data
+from zephyros.examples import get_sample_data, plot_prediction
 
 x = get_sample_data()
 nrows = x.shape[0]
-# use 99 % of data for "learning"
 learn_predict_split = int(0.99 * nrows)
 learn_data = x.iloc[:learn_predict_split]
 predict_data = x.iloc[learn_predict_split:]
-# predict the power output of a wind turbine based on
-# historical values of wind speed and temperature
-# and the respective resulting power generation of
-# the turbine
 features = ["wind_speed", "temperature"]
 target = "power_measured"
 y = learn_and_predict(learn_data, predict_data,
                       features, target, accuracy=12)
-# visualise the results
-fig, ax = plt.subplots()
-plt.plot(y.index, predict_data["power_measured"], label="expected power")
-plt.plot(y.index, y[PREDICT_KEY], label="predicted power")
-plt.fill_between(
-    y.index, y[PREDICT_KEY] + y[UNCERTAINTY_KEY],
-    y[PREDICT_KEY] - y[UNCERTAINTY_KEY],
-    color="orange", alpha=0.3, linewidth=0, label="uncertainty")
-plt.legend()
-ax.set_title("Power Prediction based on Historically Measured Values")
-ax.set_xlabel("Time index")
-ax.set_ylabel("Power in kW")
+plot_values = (y, y[PREDICT_KEY] - y[UNCERTAINTY_KEY],
+               y[PREDICT_KEY] + y[UNCERTAINTY_KEY])
+fig, ax = plot_prediction(y.index, plot_values, 
+                          predict_data["power_measured"],
+                          title="Power Prediction based on Historically Measured Values",
+                          xlabel="Time index", ylabel="Power in kW")
 plt.show()
 ```
 
@@ -91,30 +67,29 @@ plt.show()
 import matplotlib.pyplot as plt
 
 from zephyros.svm_predictor import learn_and_predict
-from zephyros.sample_data import get_sample_data
+from zephyros.examples import get_sample_data, plot_prediction
 
 x = get_sample_data()
 nrows = x.shape[0]
-# use 99.9 % of data for learning
 learn_predict_split = int(0.999 * nrows)
 learn_data = x.iloc[:learn_predict_split]
 predict_data = x.iloc[learn_predict_split:]
-# predict the power output of a wind turbine based on
-# historical values of wind speed and temperature
-# and the respective resulting power generation of
-# the turbine
 features = ["wind_speed", "temperature"]
 target = ["power_measured"]
-y = svm_predictor.learn_and_predict(learn_data, predict_data,
-                                    features, target)
-fig, ax = plt.subplots()
-plt.scatter(predict_data.index, predict_data["power_measured"],
-            label="expected power")
-plt.plot(predict_data.index, y, label="predicted power")
-plt.legend()
-ax.set_title("Power Prediction using SVR")
-ax.set_xlabel("Time index")
-ax.set_ylabel("Power in kW")
+x_in = learn_data[features].to_numpy()
+y_in = learn_data[target].to_numpy().ravel()
+x_pred = predict_data[features].to_numpy()
+model = svm_predictor.learn(x_in, y_in)
+y = svm_predictor.predict(model, x_pred)
+estimators = model.estimators_
+estimates = np.array([
+    e.predict(x_pred) for e in estimators
+])
+std_y = estimates.std(axis=0)
+fig, ax = plot_prediction(predict_data.index, (y, y - std_y / 2, y + std_y / 2),
+                          predict_data["power_measured"],
+                          title="Power Prediction using SVR",
+                          xlabel="Time index", ylabel="Power in kW")
 plt.show()
 ```
 
@@ -123,34 +98,23 @@ plt.show()
 import matplotlib.pyplot as plt
 
 from zephyros.rvm_predictor import learn_and_predict
-from zephyros.sample_data import get_sample_data
+from zephyros.examples import get_sample_data, plot_prediction
 
-# Use only a fraction of sample data to avoid memory issues
 x = get_sample_data().iloc[:2_000]
 nrows = x.shape[0]
-# use 99 % of data for learning
 learn_predict_split = int(0.95 * nrows)
 learn_data = x.iloc[:learn_predict_split]
 predict_data = x.iloc[learn_predict_split:]
-# predict the power output of a wind turbine based on
-# historical values of wind speed and temperature
-# and the respective resulting power generation of
-# the turbine
 features = ["wind_speed", "temperature"]
 target = ["power_measured"]
 y, std_y = learn_and_predict(learn_data, predict_data, features, target)
 
-fig, ax = plt.subplots()
-plt.scatter(predict_data.index, predict_data["power_measured"],
-            label="expected power")
-plt.plot(predict_data.index, y, label="predicted power")
-plt.fill_between(predict_data.index, y + std_y / 2, y - std_y / 2,
-                 color="orange", alpha=0.3, linewidth=0,
-                 label="uncertainty")
-plt.legend()
-ax.set_title("Power Prediction using RVM")
-ax.set_xlabel("Time index")
-ax.set_ylabel("Power in kW")
+fig, ax = plot_prediction(predict_data.index,
+                          (y, y - std_y / 2, y + std_y / 2),
+                          predict_data["power_measured"],
+                          title="Power Prediction using RVM",
+                          xlabel="Time index", ylabel="Power in kW")
+
 plt.show()
 ```
 
@@ -159,44 +123,7 @@ plt.show()
 import matplotlib.pyplot as plt
 
 from zephyros.boost_predictor import learn_and_predict
-from zephyros.sample_data import get_sample_data
-
-x = get_sample_data()
-nrows = x.shape[0]
-# use 99 % of data for learning
-learn_predict_split = int(0.99 * nrows)
-learn_data = x.iloc[:learn_predict_split]
-predict_data = x.iloc[learn_predict_split:]
-# predict the power output of a wind turbine based on
-# historical values of wind speed and temperature
-# and the respective resulting power generation of
-# the turbine using extreme gradient boosting
-features = ["wind_speed", "temperature"]
-target = ["power_measured"]
-# predict with 16 cross validations
-y, ly, uy = learn_and predict(learn_data, predict_data, features, target,
-                              xvalidate=16)
-# average the results of each cross validation
-y, ly, uy = y.mean(axis=0), ly.mean(axis=0), uy.mean(axis=0)
-# visualise the results
-fig, ax = plt.subplots()
-plt.plot(predict_data.index, predict_data["power_measured"], label="expected power")
-plt.plot(predict_data.index, y, label="predicted power")
-plt.fill_between(predict_data.index, uy, ly, color="orange", alpha=0.3, linewidth=0,
-                 label="uncertainty")
-plt.legend()
-ax.set_title("Power Prediction using Extreme Gradient Boosting")
-ax.set_xlabel("Time index")
-ax.set_ylabel("Power in kW")
-plt.show()
-```
-
-### Example 6: Use Artificial Neural Networks
-```python
-import matplotlib.pyplot as plt
-
-from zephyros.ann_predictor import learn_and_predict
-from zephyros.sample_data import get_sample_data
+from zephyros.examples import get_sample_data, plot_prediction
 
 x = get_sample_data()
 nrows = x.shape[0]
@@ -205,18 +132,36 @@ learn_data = x.iloc[:learn_predict_split]
 predict_data = x.iloc[learn_predict_split:]
 features = ["wind_speed", "temperature"]
 target = ["power_measured"]
-y = ann_learn_and_predict(learn_data, predict_data, features, target,
-                          xvalidate=4)
+# predict with 8 cross validations
+y, ly, uy = learn_and_predict(learn_data, predict_data, features, target,
+                              xvalidate=8)
+# average the results of each cross validation
 y = y.mean(axis=0)
-# visualise the results
-fig, ax = plt.subplots()
-plt.plot(predict_data.index, predict_data["power_measured"],
-         label="expected power")
-plt.plot(predict_data.index, y, label="predicted power")
-plt.legend()
-ax.set_title("Power Prediction with ANN")
-ax.set_xlabel("Time index")
-ax.set_ylabel("Power in kW")
+ly = ly.mean(axis=0)
+uy = uy.mean(axis=0)
+plot_prediction(y, ly, uy, predict_data)
+plt.show()
+```
+
+### Example 6: Use Artificial Neural Networks
+```python
+import matplotlib.pyplot as plt
+
+from zephyros.ann_predictor import learn_and_predict
+from zephyros.examples import get_sample_data, plot_prediction
+
+x = get_sample_data()
+nrows = x.shape[0]
+learn_predict_split = int(0.999 * nrows)
+learn_data = x.iloc[:learn_predict_split]
+predict_data = x.iloc[learn_predict_split:]
+features = ["wind_speed", "temperature"]
+target = ["power_measured"]
+y = learn_and_predict(learn_data, predict_data, features, target, xvalidate=4)
+y = y.mean(axis=0)
+fig, ax = plot_prediction(predict_data.index, (y, y, y), predict_data["power_measured"],
+                          title="Power Prediction with ANN",
+                          xlabel="Time index", ylabel="Power in kW")
 plt.show()
 ```
 

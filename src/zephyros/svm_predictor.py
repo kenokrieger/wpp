@@ -16,6 +16,7 @@ output of a wind turbine.
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from sklearn.svm import SVR
+from sklearn.ensemble import BaggingRegressor
 
 
 def learn_and_predict(learn_data, predict_data, features, target):
@@ -65,6 +66,7 @@ def learn(x_in, y_in):
     Returns:
         sklearn.svm.SVR: The learned model.
     """
-    model = SVR(kernel="rbf", gamma="auto")
+    model = BaggingRegressor(SVR(kernel="rbf", gamma="auto"), bootstrap=True,
+                             n_estimators=12, n_jobs=-1, max_samples=0.66)
     model.fit(x_in, y_in)
     return model
