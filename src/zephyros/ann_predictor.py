@@ -1,8 +1,7 @@
-from sklearn.model_selection import train_test_split
-from keras.models import Sequential
-from keras.layers import Dense
-
 import numpy as np
+from keras.layers import Dense
+from keras.models import Sequential
+from sklearn.preprocessing import StandardScaler
 
 
 def learn_and_predict(learn_data, predict_data, features, target,
@@ -29,21 +28,21 @@ def learn_and_predict(learn_data, predict_data, features, target,
     """
     random_state = np.random.default_rng(seed=seed)
     if not xvalidate:
-        model = learn(learn_data, features, target,
-                      test_percentage=test_percentage,
-                      random_state=random_state)
+        model, scaler = learn(learn_data, features, target,
+                              test_percentage=test_percentage,
+                              random_state=random_state)
         x_pred = predict_data[features].to_numpy()
-        return predict(model, x_pred)
+        return predict(model, scaler, x_pred)
 
     nrows = predict_data.shape[0]
     predicted = np.empty((xvalidate, nrows))
 
     for i in range(xvalidate):
-        model = learn(learn_data, features, target,
-                      test_percentage=test_percentage,
-                      random_state=random_state)
+        model, scaler = learn(learn_data, features, target,
+                              test_percentage=test_percentage,
+                              random_state=random_state)
         x_pred = predict_data[features].to_numpy()
-        predicted[i] = predict(model, x_pred)
+        predicted[i] = predict(model, scaler, x_pred)
     return predicted
 
 
@@ -65,8 +64,18 @@ def learn(x, features, target, test_percentage=0.33, random_state=None):
     train = x.iloc[x.index.difference(test.index)]
     x_train = train[features].to_numpy()
     y_train = train[target].to_numpy()
+    # unused data from the learning set
     x_test = test[features].to_numpy()
     y_test = test[target].to_numpy()
+
+    feature_scaler = StandardScaler()
+    target_scaler = StandardScaler()
+    feature_scaler.fit(x_train)
+    x_scaled = feature_scaler.transform(x_train)
+
+    y_train = y_train.reshape(-1, 1)
+    target_scaler.fit(y_train)
+    y_scaled = target_scaler.transform(y_train)
 
     model = Sequential()
     model.add(Dense(units=5, input_dim=2, kernel_initializer='normal',
@@ -74,11 +83,11 @@ def learn(x, features, target, test_percentage=0.33, random_state=None):
     model.add(Dense(units=5, kernel_initializer='normal', activation='tanh'))
     model.add(Dense(1, kernel_initializer='normal'))
     model.compile(loss='mean_squared_error', optimizer='adam')
-    model.fit(x_train, y_train, batch_size=200, epochs=5_000, verbose=1)
-    return model
+    model.fit(x_scaled, y_scaled, batch_size=200, epochs=100, verbose=100)
+    return model, (feature_scaler, target_scaler)
 
 
-def predict(model, x):
+def predict(model, scaler, x):
     """
     Given feature values *x* and a learned *model*, predict values for the
     target from the learning process of the model.
@@ -91,4 +100,6 @@ def predict(model, x):
         np.array: The predicted values for the target learned.
 
     """
-    return model.predict(x).ravel()
+    x_scaled = scaler[0].transform(x)
+    y = model.predict(x_scaled)
+    return scaler[1].inverse_transform(y).ravel()

@@ -35,7 +35,7 @@ fig, ax = plot_prediction(x.index, (y, y - uy, y + uy), x["power_measured"],
 plt.show()
 ```
 
-### Example 2: Use the empirical prediction method
+#### Example 2: Use the empirical prediction method
 
 ```python
 import matplotlib.pyplot as plt
@@ -62,7 +62,7 @@ fig, ax = plot_prediction(y.index, plot_values,
 plt.show()
 ```
 
-### Example 3: Use Support Vector Regression
+#### Example 3: Use Support Vector Regression
 ```python
 import matplotlib.pyplot as plt
 
@@ -93,7 +93,7 @@ fig, ax = plot_prediction(predict_data.index, (y, y - std_y / 2, y + std_y / 2),
 plt.show()
 ```
 
-### Example 4: Use Relevance Vector Regression
+#### Example 4: Use Relevance Vector Regression
 ```python
 import matplotlib.pyplot as plt
 
@@ -118,7 +118,7 @@ fig, ax = plot_prediction(predict_data.index,
 plt.show()
 ```
 
-### Example 5: Use Extreme Gradient Boosting (xgboost package)
+#### Example 5: Use Extreme Gradient Boosting (xgboost package)
 ```python
 import matplotlib.pyplot as plt
 
@@ -143,7 +143,7 @@ plot_prediction(y, ly, uy, predict_data)
 plt.show()
 ```
 
-### Example 6: Use Artificial Neural Networks
+#### Example 6: Use Artificial Neural Networks
 ```python
 import matplotlib.pyplot as plt
 
