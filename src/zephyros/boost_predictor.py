@@ -114,9 +114,9 @@ def learn(x, features, target, test_percentage=0.33,
 
     """
     options = dict(base_score=1.5e3, booster='gbtree', n_estimators=10_000,
-                   device="cuda", subsample=0.8,
-                   early_stopping_rounds=500, objective='reg:squarederror',
-                   max_depth=24, learning_rate=0.001)
+                   device="cuda", subsample=0.8, early_stopping_rounds=500,
+                   objective='reg:squarederror', max_depth=24,
+                   learning_rate=0.001)
     if xgboost_options is not None:
         options.update(xgboost_options)
 
@@ -130,9 +130,7 @@ def learn(x, features, target, test_percentage=0.33,
     y_test = test[target]
 
     reg = xgboost.XGBRegressor(**options)
-    reg.fit(x_train, y_train,
-            eval_set=[(x_train, y_train), (x_test, y_test)],
-            verbose=100)
+    reg.fit(x_train, y_train, eval_set=[(x_test, y_test)], verbose=100)
     return reg
 
 

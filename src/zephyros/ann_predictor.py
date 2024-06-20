@@ -1,3 +1,20 @@
+"""
+Module for using artificial neural networks to predict the estimated power
+output of a wind turbine.
+"""
+# Copyright (C) 2024  Keno Krieger <kriegerk@uni-bremen.de>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import numpy as np
 from keras.layers import Dense
 from keras.models import Sequential
@@ -6,7 +23,7 @@ from sklearn.preprocessing import StandardScaler
 
 
 def learn_and_predict(learn_data, predict_data, features, target,
-                      test_percentage=0.33, xvalidate=None, seed=None,
+                      test_percentage=0.33, xvalidate=0, seed=None,
                       config=None):
     """
     Convenience function combining ann_predictor.learn and ann_predictor.predict
@@ -19,8 +36,7 @@ def learn_and_predict(learn_data, predict_data, features, target,
         features(list): The features to use for learning and predicting.
         target(list): The target(s) to predict.
         test_percentage(float): Percentage of *learn_data* to use for testing.
-        xvalidate(int or None): Choose the number of cross validations.
-            Defaults to None.
+        xvalidate(int): Choose the number of cross validations. Defaults to 0.
         seed(int or None): Set a seed for the sampling of test data for
             reproducibility. Defaults to None.
         config (dict): A configuration for the structure of the neural network
@@ -31,20 +47,12 @@ def learn_and_predict(learn_data, predict_data, features, target,
 
     """
     random_state = np.random.default_rng(seed=seed)
-    if not xvalidate:
-        model, scaler = learn(learn_data, features, target,
-                              test_percentage=test_percentage,
-                              random_state=random_state)
-        x_pred = predict_data[features].to_numpy()
-        return predict(model, scaler, x_pred)
-
     nrows = predict_data.shape[0]
     predicted = np.empty((xvalidate, nrows))
-
-    for i in range(xvalidate):
+    for i in range(xvalidate + 1):
         model, scaler = learn(learn_data, features, target,
                               test_percentage=test_percentage,
-                              random_state=random_state)
+                              random_state=random_state, config=config)
         x_pred = predict_data[features].to_numpy()
         predicted[i] = predict(model, scaler, x_pred)
     return predicted
@@ -58,7 +66,8 @@ def learn(x, features, target, test_percentage=0.33, random_state=None,
         features(list): The features to use in the learning process.
         target(list): The target(s) for the learning process.
         test_percentage(float): Percentage of *x* to use for testing.
-        random_state(np.random.Generator): Random generator for the sampling.
+        random_state(np.random.Generator or None): Random generator for the
+            sampling.
         config (dict): A configuration for the structure of the neural network
             and the learning process.
 
@@ -66,20 +75,22 @@ def learn(x, features, target, test_percentage=0.33, random_state=None,
         tuple: The learned model and the scalers.
 
     """
-    cb_cls = {"EarlyStopping": EarlyStopping}
+    cb_map = {"EarlyStopping": EarlyStopping}
+    default_config = {
+        "layers": [
+            {"units": 50, "kernel_initializer": "normal", "activation": "relu"},
+            {"units": 20, "kernel_initializer": "normal", "activation": "relu"},
+            {"units": 10, "kernel_initializer": "normal", "activation": "relu"},
+            {"units": 3, "kernel_initializer": "normal", "activation": "tanh"},
+            {"units": 1, "kernel_initializer": "normal"},
+        ],
+        "compile": {"loss": "mean_squared_error", "optimizer": "adam"},
+        "callbacks": {"EarlyStopping": {"monitor": "val_loss", "patience": 5}},
+        "options": {"batch_size": 200, "epochs": 1_000, "verbose": 1}
+    }
     if config is None:
-        config = {
-            "layers": [
-                {"units": 50, "kernel_initializer": "normal", "activation": "relu"},
-                {"units": 20, "kernel_initializer": "normal", "activation": "relu"},
-                {"units": 10, "kernel_initializer": "normal", "activation": "relu"},
-                {"units": 3, "kernel_initializer": "normal", "activation": "tanh"},
-                {"units": 1, "kernel_initializer": "normal"},
-            ],
-            "compile": {"loss": "mean_squared_error", "optimizer": "adam"},
-            "callbacks": {"EarlyStopping": {"monitor": "val_loss", "patience": 5}},
-            "options": {"batch_size": 200, "epochs": 1_000, "verbose": 1}
-        }
+        default_config.update(config)
+        config = default_config
     scaler, values = _sample_and_scale(x, features, target,
                                        test_percentage, random_state)
 
@@ -87,7 +98,7 @@ def learn(x, features, target, test_percentage=0.33, random_state=None,
     model.compile(**config["compile"])
 
     cb_opt = config["callbacks"]
-    callbacks = [cb_cls[cb](**opt) for cb, opt in cb_opt.items() if cb in cb_cls]
+    callbacks = [cb_map[cb](**opt) for cb, opt in cb_opt.items() if cb in cb_map]
     model.fit(values[0], values[1],
               validation_data=values[2:],
               callbacks=callbacks,
@@ -126,7 +137,8 @@ def _sample_and_scale(x, features, target, test_percentage, random_state):
             process.
         target (list): Column name of the target for the learning process.
         test_percentage (float): Percentage of data to use for testing.
-        random_state (int or None): The random state to use for the sampling.
+        random_state (np.random.Generator or None): The random state to use for
+            the sampling.
 
     Returns:
         tuple: The scalers and the scaled values.
