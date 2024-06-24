@@ -20,9 +20,8 @@ from keras.layers import Dense
 from keras.models import Sequential
 from keras.callbacks import EarlyStopping
 from keras.utils import set_random_seed
-from sklearn.preprocessing import StandardScaler
 
-from zephyros._utils import _sample_and_scale
+from zephyros._utils import sample_and_scale
 
 
 def learn_and_predict(learn_data, predict_data, features, target,
@@ -96,8 +95,8 @@ def learn(x, features, target, test_percentage=0.33, random_state=None,
     if config is not None:
         default_config.update(config)
     config = default_config
-    scaler, values = _sample_and_scale(x, features, target, test_percentage,
-                                       random_state)
+    scaler, values = sample_and_scale(x, features, target, test_percentage,
+                                      random_state)
 
     model = Sequential([Dense(**c) for c in config["layers"]])
     model.compile(**config["compile"])

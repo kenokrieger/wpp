@@ -1,7 +1,31 @@
 from sklearn.preprocessing import StandardScaler
 
 
-def _sample_and_scale(x, features, target, test_percentage, random_state):
+def scale(x, y):
+    """
+    Scale the data for the learning process and return the scaled
+    data and the scalers used in the process.
+
+    Args:
+        x (np.ndarray): The unscaled learning data containing the feature
+            values.
+        y (np.ndarray): The unscaled learning data containing the target values.
+
+    Returns:
+        tuple: The scalers and the scaled values.
+
+    """
+    feature_scaler = StandardScaler()
+    target_scaler = StandardScaler()
+    feature_scaler.fit(x)
+    x_scaled = feature_scaler.transform(x)
+    y = y.reshape(-1, 1)
+    target_scaler.fit(y)
+    y_scaled = target_scaler.transform(y)
+    return (feature_scaler, target_scaler), (x_scaled, y_scaled)
+
+
+def sample_and_scale(x, features, target, test_percentage, random_state):
     """
     Sample and scale the data for the learning process and return the scaled
     data and the scalers used in the process.
