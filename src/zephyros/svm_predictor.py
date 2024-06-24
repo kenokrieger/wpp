@@ -15,7 +15,7 @@ output of a wind turbine.
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-from sklearn.svm import SVR
+from sklearn.svm import LinearSVR
 from sklearn.ensemble import BaggingRegressor
 
 
@@ -62,8 +62,8 @@ def learn(x_in, y_in, svr_options=None):
     target values *y_in*. Return the learned model.
 
     Args:
-        x_in(np.ndarray): Feature values to use for learning the model.
-        y_in(np.ndarray: Target value for the learning process.
+        x_in (np.ndarray): Feature values to use for learning the model.
+        y_in (np.ndarray): Target value for the learning process.
         svr_options (dict): Options for the BaggingRegressor.
 
     Returns:
@@ -72,6 +72,9 @@ def learn(x_in, y_in, svr_options=None):
     options = dict(bootstrap=True, n_estimators=12, n_jobs=-1, max_samples=0.66)
     if svr_options is not None:
         options.update(svr_options)
-    model = BaggingRegressor(SVR(kernel="rbf", gamma="auto"), **options)
+    if options["n_estimators"] > 1:
+        model = BaggingRegressor(LinearSVR(), **options)
+    else:
+        model = LinearSVR(verbose=1)
     model.fit(x_in, y_in)
     return model

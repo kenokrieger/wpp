@@ -19,7 +19,10 @@ import numpy as np
 from keras.layers import Dense
 from keras.models import Sequential
 from keras.callbacks import EarlyStopping
+from keras.utils import set_random_seed
 from sklearn.preprocessing import StandardScaler
+
+from zephyros._utils import _sample_and_scale
 
 
 def learn_and_predict(learn_data, predict_data, features, target,
@@ -46,9 +49,11 @@ def learn_and_predict(learn_data, predict_data, features, target,
         np.ndarray: The predicted values.
 
     """
+    if seed is not None:
+        set_random_seed(seed)
     random_state = np.random.default_rng(seed=seed)
     nrows = predict_data.shape[0]
-    predicted = np.empty((xvalidate, nrows))
+    predicted = np.empty((xvalidate + 1, nrows))
     for i in range(xvalidate + 1):
         model, scaler = learn(learn_data, features, target,
                               test_percentage=test_percentage,
@@ -68,8 +73,8 @@ def learn(x, features, target, test_percentage=0.33, random_state=None,
         test_percentage(float): Percentage of *x* to use for testing.
         random_state(np.random.Generator or None): Random generator for the
             sampling.
-        config (dict): A configuration for the structure of the neural network
-            and the learning process.
+        config (dict or None): A configuration for the structure of the neural
+            network and the learning process. Defaults to None.
 
     Returns:
         tuple: The learned model and the scalers.
@@ -88,11 +93,11 @@ def learn(x, features, target, test_percentage=0.33, random_state=None,
         "callbacks": {"EarlyStopping": {"monitor": "val_loss", "patience": 5}},
         "options": {"batch_size": 200, "epochs": 1_000, "verbose": 1}
     }
-    if config is None:
+    if config is not None:
         default_config.update(config)
-        config = default_config
-    scaler, values = _sample_and_scale(x, features, target,
-                                       test_percentage, random_state)
+    config = default_config
+    scaler, values = _sample_and_scale(x, features, target, test_percentage,
+                                       random_state)
 
     model = Sequential([Dense(**c) for c in config["layers"]])
     model.compile(**config["compile"])
@@ -124,41 +129,3 @@ def predict(model, scaler, x):
     x_scaled = scaler[0].transform(x)
     y = model.predict(x_scaled)
     return scaler[1].inverse_transform(y).ravel()
-
-
-def _sample_and_scale(x, features, target, test_percentage, random_state):
-    """
-    Sample and scale the data for the learning process and return the scaled
-    data and the scalers used in the process.
-
-    Args:
-        x (pandas.DataFrame): The unsampled learning data.
-        features (list): Column names of the features to use in the learning
-            process.
-        target (list): Column name of the target for the learning process.
-        test_percentage (float): Percentage of data to use for testing.
-        random_state (np.random.Generator or None): The random state to use for
-            the sampling.
-
-    Returns:
-        tuple: The scalers and the scaled values.
-
-    """
-    test = x.sample(frac=test_percentage, random_state=random_state)
-    # complement of the sampled data
-    train = x.iloc[x.index.difference(test.index)]
-    x_train = train[features].to_numpy()
-    y_train = train[target].to_numpy()
-    x_test = test[features].to_numpy()
-    y_test = test[target].to_numpy()
-    feature_scaler = StandardScaler()
-    target_scaler = StandardScaler()
-    feature_scaler.fit(x_train)
-    x_scaled = feature_scaler.transform(x_train)
-    x_test_scaled = feature_scaler.transform(x_test)
-    y_train = y_train.reshape(-1, 1)
-    target_scaler.fit(y_train)
-    y_scaled = target_scaler.transform(y_train)
-    y_test_scaled = target_scaler.transform(y_test)
-    return ((feature_scaler, target_scaler),
-            (x_scaled, y_scaled, x_test_scaled, y_test_scaled))

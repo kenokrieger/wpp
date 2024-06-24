@@ -115,8 +115,8 @@ def learn(x, features, target, test_percentage=0.33,
     """
     options = dict(base_score=1.5e3, booster='gbtree', n_estimators=10_000,
                    device="cuda", subsample=0.8, early_stopping_rounds=500,
-                   objective='reg:squarederror', max_depth=24,
-                   learning_rate=0.001)
+                   objective='reg:squarederror', max_depth=12,
+                   learning_rate=0.01)
     if xgboost_options is not None:
         options.update(xgboost_options)
 
