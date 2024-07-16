@@ -23,3 +23,4 @@ from zephyros import svm_predictor
 from zephyros import rvm_predictor
 from zephyros import boost_predictor
 from zephyros import ann_predictor
+from zephyros import examples

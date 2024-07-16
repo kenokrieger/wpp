@@ -20,7 +20,7 @@ import xgboost
 
 
 def learn_and_predict(learn_data, predict_data, features, target,
-                      test_percentage=0.33, xvalidate=None, seed=None,
+                      test_percentage=0.33, xvalidate=0, seed=None,
                       xgboost_options=None):
     """
     Convenience function that combines boost_predictor.learn and
@@ -34,8 +34,8 @@ def learn_and_predict(learn_data, predict_data, features, target,
         features(list): The features to use for learning and predicting.
         target(list): The target(s) to predict.
         test_percentage(float): Percentage of *learn_data* to use for testing.
-        xvalidate(int or None): Choose the number of cross validations.
-            Defaults to None.
+        xvalidate(int): Choose the number of cross validations.
+            Defaults to 0.
         seed(int or None): Set a seed for the sampling of test data for
             reproducibility. Defaults to None.
         xgboost_options(dict): Options to pass to xgboost.XGBRegressor.
@@ -46,20 +46,12 @@ def learn_and_predict(learn_data, predict_data, features, target,
 
     """
     random_state = np.random.default_rng(seed=seed)
-    if not xvalidate:
-        models = single_learn(learn_data, features, target, test_percentage,
-                              random_state, xgboost_options)
-        model, lower_bound_model, upper_bound_model = models
-        return (predict(model, predict_data[features]),
-                predict(lower_bound_model, predict_data[features]),
-                predict(upper_bound_model, predict_data[features]))
-
     nrows = predict_data.shape[0]
-    predicted  = np.empty((xvalidate, nrows))
-    lower_bound = np.empty((xvalidate, nrows))
-    upper_bound = np.empty((xvalidate, nrows))
+    predicted = np.empty((xvalidate + 1, nrows))
+    lower_bound = np.empty((xvalidate + 1, nrows))
+    upper_bound = np.empty((xvalidate + 1, nrows))
 
-    for i in range(xvalidate):
+    for i in range(xvalidate + 1):
         models = single_learn(learn_data, features, target, test_percentage,
                               random_state, xgboost_options)
         model, lower_bound_model, upper_bound_model = models
@@ -89,11 +81,20 @@ def single_learn(learn_data, features, target, test_percentage, random_state,
             respectively.
 
     """
-    model = learn(learn_data, features, target, test_percentage, random_state, xgboost_options)
-    lower_bound_model = learn(learn_data, features, target, test_percentage, random_state,
-                              xgboost_options=dict(objective="reg:quantileerror", quantile_alpha=0.05))
-    upper_bound_model = learn(learn_data, features, target, test_percentage, random_state,
-                              xgboost_options=dict(objective="reg:quantileerror", quantile_alpha=0.95))
+    model = learn(learn_data, features, target, test_percentage, random_state,
+                  xgboost_options)
+    lower_bound_model = learn(learn_data, features, target, test_percentage,
+                              random_state,
+                              xgboost_options=dict(
+                                  objective="reg:quantileerror",
+                                  quantile_alpha=0.05)
+                              )
+    upper_bound_model = learn(learn_data, features, target, test_percentage,
+                              random_state,
+                              xgboost_options=dict(
+                                  objective="reg:quantileerror",
+                                  quantile_alpha=0.95)
+                              )
     return model, lower_bound_model, upper_bound_model
 
 

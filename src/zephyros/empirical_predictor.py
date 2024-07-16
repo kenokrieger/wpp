@@ -38,7 +38,7 @@ def learn_and_predict(learn_data, predict_data, features, target, accuracy=3):
         features(list): Column names of the features. The order is important as
             it determines which feature is used for which split, e.g. the first
             feature is used for the first split and so on.
-        target(str): Column name of the target variable of the prediction.
+        target(list): Column name of the target variable of the prediction.
         accuracy(int): The number of splits to perform for each feature.
 
     Returns:
@@ -66,7 +66,7 @@ def predict(learned, x):
     target = list(learned.keys())
     _catch_missing_keys(x, features)
     prediction = x.apply(_predict_row, axis="columns",
-                         args=(learned, features, target))
+                         args=(learned, features))
     return pd.DataFrame(prediction.to_list(), columns=target,
                         index=prediction.index)
 
@@ -83,7 +83,7 @@ def learn(x, features, target, accuracy=3):
         features(list): Column names of the features. The order is important as
             it determines which feature is used for which split, e.g. the first
             feature is used for the first split and so on.
-        target(str): The column name of the target variable.
+        target(list): The column name of the target variable.
         accuracy(int): The number of intervals for each feature.
 
     Returns:
@@ -91,6 +91,7 @@ def learn(x, features, target, accuracy=3):
             under the key 'predicted' and its uncertainty under 'uncertainty'.
 
     """
+    target = target[0]
     _catch_accuracy_to_high(x, features, accuracy)
     paths, path_values = grow_tree(x, iter(features), target, accuracy)
     multi_index = pd.MultiIndex.from_tuples(paths, names=features)
@@ -189,7 +190,7 @@ def _myloc(learned, feature_values):
     return mask[0]
 
 
-def _predict_row(row, learned, features, target):
+def _predict_row(row, learned, features):
     """
     Predict the value for the *target* variable given a set of features by using
     binned historically found values for the *target* given the *features*.
@@ -201,7 +202,6 @@ def _predict_row(row, learned, features, target):
             intervals. If a feature is out of bound of the historic values, use
             the nearest existing interval.
         features(list): A list of column names to use for the prediction.
-        target(str): The column name of the desired prediction value.
 
     Returns:
         list: The predicted value(s) given the features.

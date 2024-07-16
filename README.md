@@ -16,15 +16,20 @@ in the  highest directory.
 
 ## Usage
 
+### About the modules
+
+All of the machine learning modules 
+(`zephyros.svm_predictor`, 
+`zephyros.rvm_predictor`, 
+`zephyros.boost_predictor`, 
+`zephyros.ann_predictor`) are wrappers for 
 ### Examples
 
 #### Example 1: Use the physical prediction method
 
 ```python
-import matplotlib.pyplot as plt
-
-from zephyros.physical_predictor import predict
 from zephyros.examples import get_sample_data, plot_prediction
+from zephyros.physical_predictor import predict
 
 # use 500 example values
 x = get_sample_data().iloc[10_000:10_500]
@@ -38,25 +43,23 @@ plt.show()
 #### Example 2: Use the empirical prediction method
 
 ```python
-import matplotlib.pyplot as plt
-
-from zephyros.empirical_predictor import (learn_and_predict, PREDICT_KEY,
-                                          UNCERTAINTY_KEY)
 from zephyros.examples import get_sample_data, plot_prediction
+from zephyros.empirical_predictor import (learn_and_predict, PREDICT_KEY,
+                                              UNCERTAINTY_KEY)
 
 x = get_sample_data()
 nrows = x.shape[0]
+# use 99 % of data for "learning"
 learn_predict_split = int(0.99 * nrows)
 learn_data = x.iloc[:learn_predict_split]
 predict_data = x.iloc[learn_predict_split:]
 features = ["wind_speed", "temperature"]
-target = "power_measured"
+target = ["power_measured"]
 y = learn_and_predict(learn_data, predict_data,
                       features, target, accuracy=12)
 plot_values = (y, y[PREDICT_KEY] - y[UNCERTAINTY_KEY],
                y[PREDICT_KEY] + y[UNCERTAINTY_KEY])
-fig, ax = plot_prediction(y.index, plot_values, 
-                          predict_data["power_measured"],
+fig, ax = plot_prediction(y.index, plot_values, predict_data["power_measured"],
                           title="Power Prediction based on Historically Measured Values",
                           xlabel="Time index", ylabel="Power in kW")
 plt.show()
@@ -64,29 +67,20 @@ plt.show()
 
 #### Example 3: Use Support Vector Regression
 ```python
-import matplotlib.pyplot as plt
-
-from zephyros.svm_predictor import learn_and_predict
 from zephyros.examples import get_sample_data, plot_prediction
+from zephyros import svm_predictor
 
 x = get_sample_data()
 nrows = x.shape[0]
+# use 99 % of data for learning
 learn_predict_split = int(0.999 * nrows)
 learn_data = x.iloc[:learn_predict_split]
 predict_data = x.iloc[learn_predict_split:]
 features = ["wind_speed", "temperature"]
 target = ["power_measured"]
-x_in = learn_data[features].to_numpy()
-y_in = learn_data[target].to_numpy().ravel()
-x_pred = predict_data[features].to_numpy()
-model = svm_predictor.learn(x_in, y_in)
-y = svm_predictor.predict(model, x_pred)
-estimators = model.estimators_
-estimates = np.array([
-    e.predict(x_pred) for e in estimators
-])
-std_y = estimates.std(axis=0)
-fig, ax = plot_prediction(predict_data.index, (y, y - std_y / 2, y + std_y / 2),
+y = svm_predictor.learn_and_predict(learn_data, predict_data,
+                                    features, target)
+fig, ax = plot_prediction(predict_data.index, (y, ),
                           predict_data["power_measured"],
                           title="Power Prediction using SVR",
                           xlabel="Time index", ylabel="Power in kW")
@@ -95,13 +89,12 @@ plt.show()
 
 #### Example 4: Use Relevance Vector Regression
 ```python
-import matplotlib.pyplot as plt
-
-from zephyros.rvm_predictor import learn_and_predict
 from zephyros.examples import get_sample_data, plot_prediction
+from zephyros.rvm_predictor import learn_and_predict
 
 x = get_sample_data().iloc[:2_000]
 nrows = x.shape[0]
+# use 99 % of data for learning
 learn_predict_split = int(0.95 * nrows)
 learn_data = x.iloc[:learn_predict_split]
 predict_data = x.iloc[learn_predict_split:]
@@ -110,46 +103,47 @@ target = ["power_measured"]
 y, std_y = learn_and_predict(learn_data, predict_data, features, target)
 
 fig, ax = plot_prediction(predict_data.index,
-                          (y, y - std_y / 2, y + std_y / 2),
+                          (y, y - std_y, y + std_y),
                           predict_data["power_measured"],
                           title="Power Prediction using RVM",
                           xlabel="Time index", ylabel="Power in kW")
+
 
 plt.show()
 ```
 
 #### Example 5: Use Extreme Gradient Boosting (xgboost package)
 ```python
-import matplotlib.pyplot as plt
-
-from zephyros.boost_predictor import learn_and_predict
 from zephyros.examples import get_sample_data, plot_prediction
+from zephyros.boost_predictor import learn_and_predict
 
 x = get_sample_data()
 nrows = x.shape[0]
+# use 99 % of data for learning
 learn_predict_split = int(0.999 * nrows)
 learn_data = x.iloc[:learn_predict_split]
 predict_data = x.iloc[learn_predict_split:]
 features = ["wind_speed", "temperature"]
 target = ["power_measured"]
-# predict with 8 cross validations
+# predict with 1 cross validation
 y, ly, uy = learn_and_predict(learn_data, predict_data, features, target,
-                              xvalidate=8)
+                              xvalidate=1)
 # average the results of each cross validation
 y = y.mean(axis=0)
 ly = ly.mean(axis=0)
 uy = uy.mean(axis=0)
-plot_prediction(y, ly, uy, predict_data)
+# visualise the results
+fig, ax = plot_prediction(predict_data.index, (y, ly, uy),
+                          predict_data["power_measured"],
+                          title="Power Prediction using XGBoost",
+                          xlabel="Time index", ylabel="Power in kW")
 plt.show()
 ```
 
 #### Example 6: Use Artificial Neural Networks
 ```python
-import matplotlib.pyplot as plt
-
-from zephyros.ann_predictor import learn_and_predict
 from zephyros.examples import get_sample_data, plot_prediction
-
+from zephyros.ann_predictor import learn_and_predict
 x = get_sample_data()
 nrows = x.shape[0]
 learn_predict_split = int(0.999 * nrows)
@@ -157,9 +151,11 @@ learn_data = x.iloc[:learn_predict_split]
 predict_data = x.iloc[learn_predict_split:]
 features = ["wind_speed", "temperature"]
 target = ["power_measured"]
-y = learn_and_predict(learn_data, predict_data, features, target, xvalidate=4)
+y = learn_and_predict(learn_data, predict_data, features, target)
 y = y.mean(axis=0)
-fig, ax = plot_prediction(predict_data.index, (y, y, y), predict_data["power_measured"],
+# visualise the results
+fig, ax = plot_prediction(predict_data.index, (y, ),
+                          predict_data["power_measured"],
                           title="Power Prediction with ANN",
                           xlabel="Time index", ylabel="Power in kW")
 plt.show()

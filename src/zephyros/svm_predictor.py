@@ -22,7 +22,7 @@ from zephyros._utils import scale
 
 
 def learn_and_predict(learn_data, predict_data, features, target,
-                      svr_options=None):
+                      svr_options=None, bagging_options=None):
     """
     Given learn data and predict data, learn a support vector machine and use
     it on the predict data. Return the predicted values.
@@ -32,7 +32,8 @@ def learn_and_predict(learn_data, predict_data, features, target,
         predict_data(pandas.DataFrame: Data to use for the prediction.
         features(list): The features to use for the learning and predicting.
         target(list): The target of the learning and predicting.
-        svr_options (dict): Options for the BaggingRegressor.
+        svr_options (dict): Options for the Regressor.
+        bagging_options (dict): Options for the Bagging Regressor
 
     Returns:
         numpy.ndarray: The predicted values.
@@ -41,7 +42,7 @@ def learn_and_predict(learn_data, predict_data, features, target,
     x_in = learn_data[features].to_numpy()
     y_in = learn_data[target].to_numpy().ravel()
     x_pred = predict_data[features].to_numpy()
-    model, scaler = learn(x_in, y_in, svr_options)
+    model, scaler = learn(x_in, y_in, svr_options, bagging_options)
     return predict(model, scaler, x_pred)
 
 
@@ -57,24 +58,27 @@ def learn(x_in, y_in, svr_options=None, bagging_options=None):
         y_in (np.ndarray): Target value for the learning process.
         svr_options (dict): Options for the Regressor.
         bagging_options (dict): Options for the Bagging Regressor
+
     Returns:
-        sklearn.svm.SVR: The learned model.
+        tuple: The learned model and the scaler.
+
     """
     svr_config = dict(kernel="rbf")
-    bagging_config = dict(bootstrap=True, n_estimators=12, n_jobs=-1,
+    bagging_config = dict(bootstrap=True, n_estimators=1, n_jobs=-1,
                           max_samples=0.66)
     if svr_options is not None:
         svr_config.update(svr_options)
     if bagging_options is not None:
         bagging_config.update(bagging_options)
-    if svr_config["kernel"] == "linear":
+
+    if svr_config["kernel"] == "fast-linear":
         regressor = LinearSVR
         del svr_config["kernel"]
     else:
         regressor = SVR
 
     scaler, values = scale(x_in, y_in)
-    if bagging_options["n_estimators"] > 1:
+    if bagging_config["n_estimators"] > 1:
         model = BaggingRegressor(regressor(**svr_config), **bagging_config)
     else:
         model = regressor(verbose=1, **svr_config)
@@ -89,7 +93,7 @@ def predict(model, scaler, x):
         model(sklearn.svm.SVR): The learned model.
         scaler(tuple): The feature and target scaler that were used in
             the learning of the model.
-        x_pred(numpy.ndarray): Feature values to use for the prediction.
+        x(numpy.ndarray): Feature values to use for the prediction.
 
     Returns:
         np.ndarray: The predicted values.

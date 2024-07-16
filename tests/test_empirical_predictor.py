@@ -48,10 +48,10 @@ def test_learn_and_predict(test_case, acc):
     if len(test_case) == 4 and acc == 16:
         with pytest.raises(ValueError):
             y = learn_and_predict(learn_data, predict_data, test_case,
-                                  "power_measured", acc)
+                                  ["power_measured"], acc)
     else:
         y = learn_and_predict(learn_data, predict_data, test_case,
-                              "power_measured", acc)
+                              ["power_measured"], acc)
         name = f"./tests/test_data/{'_'.join((t for t in test_case))}_{acc}.csv"
         expected = pd.read_csv(name)
         assert (np.allclose(y["predicted"], expected["predicted"], rtol=0.02)
