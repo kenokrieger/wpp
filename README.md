@@ -7,22 +7,75 @@ calculations to machine learning.
 
 ## Install
 
-Download the source code of the newest release from
-[GitHub](https://github.com/kenokrieger/zephyros). Then run
+You can install the package directly from [GitHub](https://github.com/kenokrieger/zephyros) by running
+```bash
+pip install git+https://github.com/kenokrieger/zephyros
+```
+or download the source code of the latest 
+[release](https://github.com/kenokrieger/zephyros/releases/latest)
+and then run
 ```bash
 python3 -m pip install .
 ``` 
-in the  highest directory.
+in the top-level directory to install the package.
 
 ## Usage
 
 ### About the modules
 
-All of the machine learning modules 
-(`zephyros.svm_predictor`, 
-`zephyros.rvm_predictor`, 
-`zephyros.boost_predictor`, 
-`zephyros.ann_predictor`) are wrappers for 
+All the machine learning modules 
+(`zephyros.svm_predictor`, `zephyros.rvm_predictor`, 
+`zephyros.boost_predictor`, `zephyros.ann_predictor`)
+are wrappers for existing libraries. Their functions are to be understood
+as convenience functions (see [Examples]("#Examples") below). In the 
+following the customisation options for each module will be explained.
+
+#### zephyros.svm_predictor
+
+By default the `svm_predictor` module use the
+[sklearn.svm.SVR](https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVR.html#sklearn.svm.SVR) 
+regressor. Options can be passed to the regressor by using the `svr_options`
+parameter. For the option `kernel='fast-linear'` the 
+[sklearn.svm.LinearSVR](https://scikit-learn.org/stable/modules/generated/sklearn.svm.LinearSVR.html#sklearn.svm.LinearSVR) 
+regressor will be used instead. Additionally, if desired, it can use the 
+[sklearn.ensemble.BaggingRegressor](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.BaggingRegressor.html)
+using the `bagging_options` parameter with `n_estimators > 1`.
+
+#### zephyros.rvm_predictor
+
+The `rvm_predictor` uses the 
+[sklearn_rvm.em_rvm.EMRVR](https://sklearn-rvm.readthedocs.io/en/latest/generated/sklearn_rvm.em_rvm.EMRVR.html)
+regressor. It can be configured using the `rvm_options` parameter.
+
+#### zephyros.boost_predictor
+
+The `boost_predictor` uses the 
+[xgboost.XGBRegressor](https://xgboost.readthedocs.io/en/stable/python/python_api.html#module-xgboost.sklearn).
+It can be configured using the `xgboost_options` parameter.
+
+#### zephyros.ann_predictor
+
+The `ann_predictor` is a wrapper for `keras`. Here, not only options can
+be passed but also a configuration of dense layers. For example
+```python
+config = {
+    # layers of the model
+    "layers": [
+        {"units": 50, "kernel_initializer": "normal", "activation": "relu"},
+        {"units": 20, "kernel_initializer": "normal", "activation": "relu"},
+        {"units": 10, "kernel_initializer": "normal", "activation": "relu"},
+        {"units": 3, "kernel_initializer": "normal", "activation": "tanh"},
+        {"units": 1, "kernel_initializer": "normal"},
+    ],
+    # options for compiling the model
+    "compile": {"loss": "mean_squared_error", "optimizer": "adam"},
+    # callbacks and their respective options
+    "callbacks": {"EarlyStopping": {"monitor": "val_loss", "patience": 5}},
+    # options for the learning process
+    "options": {"batch_size": 200, "epochs": 1_000, "verbose": 1}
+}
+```
+
 ### Examples
 
 #### Example 1: Use the physical prediction method
@@ -152,6 +205,7 @@ predict_data = x.iloc[learn_predict_split:]
 features = ["wind_speed", "temperature"]
 target = ["power_measured"]
 y = learn_and_predict(learn_data, predict_data, features, target)
+# learn and predict returns a column vector
 y = y.mean(axis=0)
 # visualise the results
 fig, ax = plot_prediction(predict_data.index, (y, ),
@@ -177,7 +231,7 @@ directory.
 
 Tests are only implemented for modules that contain large self implemented
 methods. Modules that only serve as API for well-tested packages 
-(e.g. boost_predictor.py) are not tested.
+(e.g. `zephyros.boost_predictor`) are not tested.
 
 ## License
 
