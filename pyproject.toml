@@ -16,6 +16,16 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
 ]
+dependencies = [
+    "numpy",
+    "pandas",
+    "matplotlib",
+    "sklearn",
+    "tensorflow",
+    "keras",
+    "xgboost",
+    "sklearn_rvm"
+]
 
 [project.urls]
 homepage = "https://github.com/kenokrieger/zephyros"
