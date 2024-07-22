@@ -20,7 +20,7 @@ dependencies = [
     "numpy",
     "pandas",
     "matplotlib",
-    "sklearn",
+    "scikit-learn",
     "tensorflow",
     "keras",
     "xgboost",
