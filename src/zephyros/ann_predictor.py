@@ -25,8 +25,7 @@ from zephyros._utils import sample_and_scale
 
 
 def learn_and_predict(learn_data, predict_data, features, target,
-                      test_percentage=0.33, xvalidate=0, seed=None,
-                      config=None):
+                      test_percentage=0.33, seed=None, config=None):
     """
     Convenience function combining ann_predictor.learn and ann_predictor.predict
     into a single function. Given feature values and a target to predict, learn
@@ -51,15 +50,11 @@ def learn_and_predict(learn_data, predict_data, features, target,
     if seed is not None:
         set_random_seed(seed)
     random_state = np.random.default_rng(seed=seed)
-    nrows = predict_data.shape[0]
-    predicted = np.empty((xvalidate + 1, nrows))
-    for i in range(xvalidate + 1):
-        model, scaler = learn(learn_data, features, target,
-                              test_percentage=test_percentage,
-                              random_state=random_state, config=config)
-        x_pred = predict_data[features].to_numpy()
-        predicted[i] = predict(model, scaler, x_pred)
-    return predicted
+    model, scaler = learn(learn_data, features, target,
+                          test_percentage=test_percentage,
+                          random_state=random_state, config=config)
+    x_pred = predict_data[features].to_numpy()
+    return predict(model, scaler, x_pred)
 
 
 def learn(x, features, target, test_percentage=0.33, random_state=None,
@@ -127,4 +122,7 @@ def predict(model, scaler, x):
     """
     x_scaled = scaler[0].transform(x)
     y = model.predict(x_scaled)
-    return scaler[1].inverse_transform(y).ravel()
+    prediction = scaler[1].inverse_transform(y)
+    if prediction.shape[1] == 1:
+        return prediction.ravel()
+    return prediction

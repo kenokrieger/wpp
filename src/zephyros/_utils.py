@@ -19,7 +19,8 @@ def scale(x, y):
     target_scaler = StandardScaler()
     feature_scaler.fit(x)
     x_scaled = feature_scaler.transform(x)
-    y = y.reshape(-1, 1)
+    if len(y.shape) == 1:
+        y = y.reshape(-1, 1)
     target_scaler.fit(y)
     y_scaled = target_scaler.transform(y)
     return (feature_scaler, target_scaler), (x_scaled, y_scaled)
@@ -55,7 +56,8 @@ def sample_and_scale(x, features, target, test_percentage, random_state):
     feature_scaler.fit(x_train)
     x_scaled = feature_scaler.transform(x_train)
     x_test_scaled = feature_scaler.transform(x_test)
-    y_train = y_train.reshape(-1, 1)
+    if len(y_train.shape) == 1:
+        y_train = y_train.reshape(-1, 1)
     target_scaler.fit(y_train)
     y_scaled = target_scaler.transform(y_train)
     y_test_scaled = target_scaler.transform(y_test)
