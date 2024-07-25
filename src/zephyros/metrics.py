@@ -19,12 +19,11 @@ import numpy as np
 import pandas as pd
 
 
-def madtm(actual, predicted, lower, upper):
+def mdtm(actual, lower, upper):
     """
-
+    The mean distance to margin(s)
     Args:
         actual (pd.Series): The measured values.
-        predicted (pd.Series): The predicted values.
         lower (pd.Series): The lower bound of the confidence interval for the
             predicted values.
         upper (pd.Series): The upper bound of the confidence interval for the
@@ -35,13 +34,20 @@ def madtm(actual, predicted, lower, upper):
             quality of the confidence interval.
 
     """
-    distance_to_lower = (actual - lower).abs()
-    distance_to_upper = (actual - upper).abs()
-    min_distance = pd.Series(data=0.0, index=actual.index)
-    use_lower = distance_to_lower < distance_to_upper
-    min_distance.loc[use_lower] = distance_to_lower.loc[use_lower]
-    min_distance.loc[~use_lower] = distance_to_upper.loc[~use_lower]
-    return min_distance.abs().mean()
+    distance_to_lower = lower - actual
+    distance_to_upper = actual - upper
+    # case 1: actual value is smaller than lower bound
+    # distance to lower > 0 -> use this, i.e. max()
+    # distance to upper < 0
+    # case 2: actual value is between lower and upper bound
+    # distance to lower < 0 -> use any for max penalty use max()
+    # distance to upper < 0 -> use any
+    # case 3: actual value is larger upper bound
+    # distance to lower < 0
+    # distance to upper > 0 -> use this, i.e. max()
+    distance = distance_to_lower.where(distance_to_lower > distance_to_upper,
+                                       distance_to_upper)
+    return distance
 
 
 def uncertainty_quality(actual, predicted, uncertainty):
