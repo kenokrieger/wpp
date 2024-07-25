@@ -34,19 +34,21 @@ def mdtm(actual, lower, upper):
             quality of the confidence interval.
 
     """
-    distance_to_lower = lower - actual
-    distance_to_upper = actual - upper
+    distance_to_lower = actual - lower
+    distance_to_upper = upper - actual
     # case 1: actual value is smaller than lower bound
-    # distance to lower > 0 -> use this, i.e. max()
-    # distance to upper < 0
+    # distance to lower < 0 -> use this, i.e. min()
+    # distance to upper > 0
     # case 2: actual value is between lower and upper bound
-    # distance to lower < 0 -> use any for max penalty use max()
-    # distance to upper < 0 -> use any
+    # distance to lower > 0 -> use any
+    # distance to upper > 0 -> use any
     # case 3: actual value is larger upper bound
-    # distance to lower < 0
-    # distance to upper > 0 -> use this, i.e. max()
-    distance = distance_to_lower.where(distance_to_lower > distance_to_upper,
+    # distance to lower > 0
+    # distance to upper < 0 -> use this, i.e. min()
+    distance = distance_to_lower.where(distance_to_lower < distance_to_upper,
                                        distance_to_upper)
+    # square values outside the bounds
+    distance = distance.where(distance > 0, distance ** 2)
     return distance.mean()
 
 
