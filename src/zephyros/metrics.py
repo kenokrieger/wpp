@@ -47,7 +47,7 @@ def mdtm(actual, lower, upper):
     # distance to upper > 0 -> use this, i.e. max()
     distance = distance_to_lower.where(distance_to_lower > distance_to_upper,
                                        distance_to_upper)
-    return distance
+    return distance.mean()
 
 
 def uncertainty_quality(actual, predicted, uncertainty):
