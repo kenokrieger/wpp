@@ -25,7 +25,8 @@ from zephyros._utils import sample_and_scale
 
 
 def learn_and_predict(learn_data, predict_data, features, target,
-                      test_percentage=0.33, seed=None, config=None):
+                      test_percentage=0.33, seed=None, scale=True,
+                      config=None):
     """
     Convenience function combining ann_predictor.learn and ann_predictor.predict
     into a single function. Given feature values and a target to predict, learn
@@ -40,6 +41,7 @@ def learn_and_predict(learn_data, predict_data, features, target,
         xvalidate(int): Choose the number of cross validations. Defaults to 0.
         seed(int or None): Set a seed for the sampling of test data for
             reproducibility. Defaults to None.
+        scale (bool): Scale the in- and output values. Defaults to True.
         config (dict): A configuration for the structure of the neural network
             and the learning process.
 
@@ -52,13 +54,14 @@ def learn_and_predict(learn_data, predict_data, features, target,
     random_state = np.random.default_rng(seed=seed)
     model, scaler = learn(learn_data, features, target,
                           test_percentage=test_percentage,
-                          random_state=random_state, config=config)
+                          random_state=random_state,
+                          scale=scale, config=config)
     x_pred = predict_data[features].to_numpy()
     return predict(model, scaler, x_pred)
 
 
 def learn(x, features, target, test_percentage=0.33, random_state=None,
-          config=None):
+          scale=True, config=None):
     """
     Args:
         x(pandas.DataFrame): The data to use for learning a model.
@@ -67,6 +70,7 @@ def learn(x, features, target, test_percentage=0.33, random_state=None,
         test_percentage(float): Percentage of *x* to use for testing.
         random_state(np.random.Generator or None): Random generator for the
             sampling.
+        scale (bool): Scale the in- and output values. Defaults to True.
         config (dict or None): A configuration for the structure of the neural
             network and the learning process. Defaults to None.
 
@@ -91,7 +95,7 @@ def learn(x, features, target, test_percentage=0.33, random_state=None,
         default_config.update(config)
     config = default_config
     scaler, values = sample_and_scale(x, features, target, test_percentage,
-                                      random_state)
+                                      random_state, scale=scale)
 
     model = Sequential([Dense(**c) for c in config["layers"]])
     model.compile(**config["compile"])
@@ -120,9 +124,12 @@ def predict(model, scaler, x):
         np.array: The predicted values for the target learned.
 
     """
-    x_scaled = scaler[0].transform(x)
-    y = model.predict(x_scaled)
-    prediction = scaler[1].inverse_transform(y)
+    if scaler is not None:
+        x_scaled = scaler[0].transform(x)
+        y = model.predict(x_scaled)
+        prediction = scaler[1].inverse_transform(y)
+    else:
+        prediction = model.predict(x)
     if prediction.shape[1] == 1:
         return prediction.ravel()
     return prediction
