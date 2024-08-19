@@ -56,7 +56,7 @@ def learn_and_predict(learn_data, predict_data, features, target,
                           test_percentage=test_percentage,
                           random_state=random_state,
                           scale=scale, config=config)
-    x_pred = predict_data[features].to_numpy()
+    x_pred = predict_data[features].to_numpy(dtype=float)
     return predict(model, scaler, x_pred)
 
 
@@ -95,7 +95,7 @@ def learn(x, features, target, test_percentage=0.33, random_state=None,
         default_config.update(config)
     config = default_config
     scaler, values = sample_and_scale(x, features, target, test_percentage,
-                                      random_state, scale=scale)
+                                      random_state, sample_only=not scale)
 
     model = Sequential([Dense(**c) for c in config["layers"]])
     model.compile(**config["compile"])

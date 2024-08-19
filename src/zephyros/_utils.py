@@ -27,7 +27,7 @@ def scale(x, y):
 
 
 def sample_and_scale(x, features, target, test_percentage, random_state,
-                     scale=True):
+                     sample_only=False):
     """
     Sample and scale the data for the learning process and return the scaled
     data and the scalers used in the process.
@@ -40,7 +40,8 @@ def sample_and_scale(x, features, target, test_percentage, random_state,
         test_percentage (float): Percentage of data to use for testing.
         random_state (np.random.Generator or None): The random state to use for
             the sampling.
-        scale (bool): Scale the values. Defaults to True.
+        sample_only (bool): Only sample and do not scale the values.
+            Defaults to False.
 
     Returns:
         tuple: The scalers and the scaled values.
@@ -49,11 +50,12 @@ def sample_and_scale(x, features, target, test_percentage, random_state,
     test = x.sample(frac=test_percentage, random_state=random_state)
     # complement of the sampled data
     train = x.iloc[x.index.difference(test.index)]
-    x_train = train[features].to_numpy()
-    y_train = train[target].to_numpy()
-    x_test = test[features].to_numpy()
-    y_test = test[target].to_numpy()
-    if not scale:
+    x_train = train[features].to_numpy(dtype=float)
+    y_train = train[target].to_numpy(dtype=float)
+    x_test = test[features].to_numpy(dtype=float)
+    y_test = test[target].to_numpy(dtype=float)
+
+    if sample_only:
         return None, (x_train, y_train, x_test, y_test)
 
     feature_scaler = StandardScaler()

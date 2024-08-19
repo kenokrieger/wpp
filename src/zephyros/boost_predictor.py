@@ -148,21 +148,21 @@ def single_learn(learn_data, features, target, test_percentage, random_state,
             respectively.
 
     """
-    if xgboost_options is None:
-        xgboost_options = {}
+    options = dict()
+    if xgboost_options is not None:
+        options.update(xgboost_options)
     model = learn(learn_data, features, target, test_percentage, random_state,
                   xgboost_options)
+    options.update(dict(objective="reg:quantileerror",
+                                quantile_alpha=0.05))
     lower_bound_model = learn(learn_data, features, target, test_percentage,
                               random_state,
-                              xgboost_options=xgboost_options.update(dict(
-                                  objective="reg:quantileerror",
-                                  quantile_alpha=0.05))
+                              xgboost_options=options
                               )
+    options.update(dict(quantile_alpha=0.95))
     upper_bound_model = learn(learn_data, features, target, test_percentage,
                               random_state,
-                              xgboost_options=xgboost_options.update(dict(
-                                  objective="reg:quantileerror",
-                                  quantile_alpha=0.95))
+                              xgboost_options=options
                               )
     return model, lower_bound_model, upper_bound_model
 
@@ -193,10 +193,10 @@ def learn(x, features, target, test_percentage=0.33,
     # complement of the sampled data
     train = x.iloc[x.index.difference(test.index)]
 
-    x_train = train[features]
-    y_train = train[target]
-    x_test = test[features]
-    y_test = test[target]
+    x_train = train[features].to_numpy()
+    y_train = train[target].to_numpy()
+    x_test = test[features].to_numpy()
+    y_test = test[target].to_numpy()
 
     reg = xgboost.XGBRegressor(**options)
     reg.fit(x_train, y_train, eval_set=[(x_test, y_test)], verbose=100)
@@ -216,4 +216,4 @@ def predict(model, x):
         np.array: The predicted values for the target learned.
 
     """
-    return model.predict(x)
+    return model.predict(x.to_numpy())
