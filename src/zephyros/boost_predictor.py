@@ -183,15 +183,13 @@ def learn(x, features, target, test_percentage=0.33,
         xgboost.XGBRegressor: The learned model.
 
     """
-    options = dict(base_score=1.5e3, booster='gbtree', n_estimators=10_000,
-                   device="cuda", subsample=0.8, early_stopping_rounds=500,
-                   objective='reg:squarederror', learning_rate=0.01)
+    options = dict(booster='gbtree', objective='reg:squarederror')
     if xgboost_options is not None:
         options.update(xgboost_options)
 
     test = x.sample(frac=test_percentage, random_state=random_state)
     # complement of the sampled data
-    train = x.iloc[x.index.difference(test.index)]
+    train = x.loc[x.index.difference(test.index)]
 
     x_train = train[features].to_numpy()
     y_train = train[target].to_numpy()

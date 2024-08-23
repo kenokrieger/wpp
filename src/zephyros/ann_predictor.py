@@ -82,8 +82,6 @@ def learn(x, features, target, test_percentage=0.33, random_state=None,
     default_config = {
         "layers": [
             {"units": 50, "kernel_initializer": "normal", "activation": "relu"},
-            {"units": 20, "kernel_initializer": "normal", "activation": "relu"},
-            {"units": 10, "kernel_initializer": "normal", "activation": "relu"},
             {"units": 3, "kernel_initializer": "normal", "activation": "tanh"},
             {"units": 1, "kernel_initializer": "normal"},
         ],
