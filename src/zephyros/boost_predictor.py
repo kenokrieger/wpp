@@ -159,7 +159,8 @@ def single_learn(learn_data, features, target, test_percentage, random_state,
                               random_state,
                               xgboost_options=options
                               )
-    options.update(dict(quantile_alpha=0.95))
+    options.update(dict(objective="reg:quantileerror",
+                                quantile_alpha=0.95))
     upper_bound_model = learn(learn_data, features, target, test_percentage,
                               random_state,
                               xgboost_options=options
