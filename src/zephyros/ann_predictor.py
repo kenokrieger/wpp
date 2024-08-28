@@ -113,7 +113,7 @@ def predict(model, scaler, x):
     target from the learning process of the model.
 
     Args:
-        model(xgboost.XGBRegressor): The learned model.
+        model(keras.models.Sequential): The learned model.
         scaler(tuple): The feature and target scaler that were used in
             the learning of the model.
         x(pandas.DataFrame): Feature values.
