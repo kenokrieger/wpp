@@ -92,9 +92,9 @@ def _learn_and_predict_with_margins(learn_data, predict_data, features, target,
         models = single_learn(learn_data, features, target, test_percentage,
                               random_state, xgboost_options)
         model, lower_bound_model, upper_bound_model = models
-        predicted[i] = predict(*model, predict_data[features])
-        lower_bound[i] = predict(*lower_bound_model, predict_data[features])
-        upper_bound[i] = predict(*upper_bound_model, predict_data[features])
+        predicted[i] = predict(*model, predict_data[features].to_numpy())
+        lower_bound[i] = predict(*lower_bound_model, predict_data[features].to_numpy())
+        upper_bound[i] = predict(*upper_bound_model, predict_data[features].to_numpy())
     return lower_bound, predicted, upper_bound
 
 
@@ -126,7 +126,7 @@ def _learn_and_predict(learn_data, predict_data, features, target,
     for i in range(xvalidate + 1):
         model = learn(learn_data, features, target, test_percentage,
                       random_state, xgboost_options)
-        predicted[i] = predict(*model, predict_data[features])
+        predicted[i] = predict(*model, predict_data[features].to_numpy())
     return predicted
 
 
@@ -209,6 +209,8 @@ def predict(model, scaler, x):
     if scaler is not None:
         x_scaled = scaler[0].transform(x)
         y = model.predict(x_scaled)
+        if len(y.shape) == 1:
+            y = y.reshape(-1, 1)
         prediction = scaler[1].inverse_transform(y)
     else:
         prediction = model.predict(x)
