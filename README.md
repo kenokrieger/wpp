@@ -2,54 +2,58 @@
 
 zephyros, named after one of the Greek gods of wind,
 is a package designed for predicting power output from wind turbines
-(or wind farms) using different methods ranging from physical power 
+(or wind farms) using different methods ranging from physical power
 calculations to machine learning.
 
 ## Install
 
 You can install the package directly from [GitHub](https://github.com/kenokrieger/zephyros) by running
+
 ```bash
 pip install git+https://github.com/kenokrieger/zephyros
 ```
-or download the source code of the latest 
+
+or download the source code of the latest
 [release](https://github.com/kenokrieger/zephyros/releases/latest)
 and then run
+
 ```bash
 python3 -m pip install .
-``` 
+```
+
 in the top-level directory to install the package.
 
 ## Usage
 
 ### About the modules
 
-All the machine learning modules 
-(`zephyros.svm_predictor`, `zephyros.rvm_predictor`, 
+All the machine learning modules
+(`zephyros.svm_predictor`, `zephyros.rvm_predictor`,
 `zephyros.boost_predictor`, `zephyros.ann_predictor`)
 are wrappers for existing libraries. Their functions are to be understood
-as convenience functions (see [Examples]("#Examples") below). In the 
+as convenience functions (see [Examples](%22#Examples%22) below). In the
 following the customisation options for each module will be explained.
 
 #### zephyros.svm_predictor
 
 By default the `svm_predictor` module use the
-[sklearn.svm.SVR](https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVR.html#sklearn.svm.SVR) 
+[sklearn.svm.SVR](https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVR.html#sklearn.svm.SVR)
 regressor. Options can be passed to the regressor by using the `svr_options`
-parameter. For the option `kernel='fast-linear'` the 
-[sklearn.svm.LinearSVR](https://scikit-learn.org/stable/modules/generated/sklearn.svm.LinearSVR.html#sklearn.svm.LinearSVR) 
-regressor will be used instead. Additionally, if desired, it can use the 
+parameter. For the option `kernel='fast-linear'` the
+[sklearn.svm.LinearSVR](https://scikit-learn.org/stable/modules/generated/sklearn.svm.LinearSVR.html#sklearn.svm.LinearSVR)
+regressor will be used instead. Additionally, if desired, it can use the
 [sklearn.ensemble.BaggingRegressor](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.BaggingRegressor.html)
 using the `bagging_options` parameter with `n_estimators > 1`.
 
 #### zephyros.rvm_predictor
 
-The `rvm_predictor` uses the 
+The `rvm_predictor` uses the
 [sklearn_rvm.em_rvm.EMRVR](https://sklearn-rvm.readthedocs.io/en/latest/generated/sklearn_rvm.em_rvm.EMRVR.html)
 regressor. It can be configured using the `rvm_options` parameter.
 
 #### zephyros.boost_predictor
 
-The `boost_predictor` uses the 
+The `boost_predictor` uses the
 [xgboost.XGBRegressor](https://xgboost.readthedocs.io/en/stable/python/python_api.html#module-xgboost.sklearn).
 It can be configured using the `xgboost_options` parameter.
 
@@ -57,6 +61,7 @@ It can be configured using the `xgboost_options` parameter.
 
 The `ann_predictor` is a wrapper for `keras`. Here, not only options can
 be passed but also a configuration of dense layers. For example
+
 ```python
 config = {
     # layers of the model
@@ -119,6 +124,7 @@ plt.show()
 ```
 
 #### Example 3: Use Support Vector Regression
+
 ```python
 from zephyros.examples import get_sample_data, plot_prediction
 from zephyros import svm_predictor
@@ -141,6 +147,7 @@ plt.show()
 ```
 
 #### Example 4: Use Relevance Vector Regression
+
 ```python
 from zephyros.examples import get_sample_data, plot_prediction
 from zephyros.rvm_predictor import learn_and_predict
@@ -166,6 +173,7 @@ plt.show()
 ```
 
 #### Example 5: Use Extreme Gradient Boosting (xgboost package)
+
 ```python
 from zephyros.examples import get_sample_data, plot_prediction
 from zephyros.boost_predictor import learn_and_predict
@@ -194,6 +202,7 @@ plt.show()
 ```
 
 #### Example 6: Use Artificial Neural Networks
+
 ```python
 from zephyros.examples import get_sample_data, plot_prediction
 from zephyros.ann_predictor import learn_and_predict
@@ -219,18 +228,20 @@ plt.show()
 
 ### Tests
 
-**IMPORTANT NOTICE: Test data in the test_data directory is 
+**IMPORTANT NOTICE: Test data in the test_data directory is
 licensed under CC BY Attribution 4.0 International license**
 
-Tests can be run by executing 
+Tests can be run by executing
+
 ```bash
 python3 -m pytest
 ```
+
 in the highest
 directory.
 
 Tests are only implemented for modules that contain large self implemented
-methods. Modules that only serve as API for well-tested packages 
+methods. Modules that only serve as API for well-tested packages
 (e.g. `zephyros.boost_predictor`) are not tested.
 
 ## License

@@ -18,6 +18,8 @@ output of a wind turbine.
 import numpy as np
 import xgboost
 
+from zephyros._utils import sample_and_scale
+
 
 def learn_and_predict(learn_data, predict_data, features, target,
                       test_percentage=0.33, xvalidate=0, seed=None,
@@ -90,9 +92,9 @@ def _learn_and_predict_with_margins(learn_data, predict_data, features, target,
         models = single_learn(learn_data, features, target, test_percentage,
                               random_state, xgboost_options)
         model, lower_bound_model, upper_bound_model = models
-        predicted[i] = predict(model, predict_data[features])
-        lower_bound[i] = predict(lower_bound_model, predict_data[features])
-        upper_bound[i] = predict(upper_bound_model, predict_data[features])
+        predicted[i] = predict(*model, predict_data[features].to_numpy())
+        lower_bound[i] = predict(*lower_bound_model, predict_data[features].to_numpy())
+        upper_bound[i] = predict(*upper_bound_model, predict_data[features].to_numpy())
     return lower_bound, predicted, upper_bound
 
 
@@ -124,7 +126,7 @@ def _learn_and_predict(learn_data, predict_data, features, target,
     for i in range(xvalidate + 1):
         model = learn(learn_data, features, target, test_percentage,
                       random_state, xgboost_options)
-        predicted[i] = predict(model, predict_data[features])
+        predicted[i] = predict(*model, predict_data[features].to_numpy())
     return predicted
 
 
@@ -153,18 +155,12 @@ def single_learn(learn_data, features, target, test_percentage, random_state,
         options.update(xgboost_options)
     model = learn(learn_data, features, target, test_percentage, random_state,
                   xgboost_options)
-    options.update(dict(objective="reg:quantileerror",
-                                quantile_alpha=0.05))
+    options.update(dict(objective="reg:quantileerror", quantile_alpha=0.05))
     lower_bound_model = learn(learn_data, features, target, test_percentage,
-                              random_state,
-                              xgboost_options=options
-                              )
-    options.update(dict(objective="reg:quantileerror",
-                                quantile_alpha=0.95))
+                              random_state, xgboost_options=options)
+    options.update(dict(quantile_alpha=0.95))
     upper_bound_model = learn(learn_data, features, target, test_percentage,
-                              random_state,
-                              xgboost_options=options
-                              )
+                              random_state, xgboost_options=options)
     return model, lower_bound_model, upper_bound_model
 
 
@@ -188,31 +184,37 @@ def learn(x, features, target, test_percentage=0.33,
     if xgboost_options is not None:
         options.update(xgboost_options)
 
-    test = x.sample(frac=test_percentage, random_state=random_state)
-    # complement of the sampled data
-    train = x.loc[x.index.difference(test.index)]
-
-    x_train = train[features].to_numpy()
-    y_train = train[target].to_numpy()
-    x_test = test[features].to_numpy()
-    y_test = test[target].to_numpy()
-
+    scaler, values = sample_and_scale(x, features, target, test_percentage,
+                                      random_state)
     reg = xgboost.XGBRegressor(**options)
-    reg.fit(x_train, y_train, eval_set=[(x_test, y_test)], verbose=100)
-    return reg
+    reg.fit(values[0], values[1], eval_set=[values[2:]], verbose=100)
+    return reg, scaler
 
 
-def predict(model, x):
+def predict(model, scaler, x):
     """
     Given feature values *x* and a learned *model*, predict values for the
     target from the learning process of the model.
 
     Args:
-        model(xgboost.XGBRegressor): The learned model.
+        model(xgb.XGBRegressor): The learned model.
+        scaler(tuple): The feature and target scaler that were used in
+            the learning of the model.
         x(pandas.DataFrame): Feature values.
 
     Returns:
         np.array: The predicted values for the target learned.
 
     """
-    return model.predict(x.to_numpy())
+    if scaler is not None:
+        x_scaled = scaler[0].transform(x)
+        y = model.predict(x_scaled)
+        if len(y.shape) == 1:
+            y = y.reshape(-1, 1)
+        prediction = scaler[1].inverse_transform(y)
+    else:
+        prediction = model.predict(x)
+    if prediction.shape[1] == 1:
+        return prediction.ravel()
+    return prediction
+
