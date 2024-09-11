@@ -1,7 +1,7 @@
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 
-def scale(x, y):
+def scale(x, y, method="standard"):
     """
     Scale the data for the learning process and return the scaled
     data and the scalers used in the process.
@@ -10,13 +10,21 @@ def scale(x, y):
         x (np.ndarray): The unscaled learning data containing the feature
             values.
         y (np.ndarray): The unscaled learning data containing the target values.
+        method (str): The type of scaler to use, e.g. standard or minmax.
+            Defaults to 'standard'.
 
     Returns:
         tuple: The scalers and the scaled values.
 
     """
-    feature_scaler = StandardScaler()
-    target_scaler = StandardScaler()
+    scaler_mapping = {"standard": StandardScaler, "minmax": MinMaxScaler}
+    try:
+        scaler = scaler_mapping[method]
+    except KeyError:
+        raise KeyError(f"Method {method} not supported. Supported methods are: "
+                       ", ".join(scaler_mapping.keys()))
+    feature_scaler = scaler()
+    target_scaler = scaler()
     feature_scaler.fit(x)
     x_scaled = feature_scaler.transform(x)
     if len(y.shape) == 1:
@@ -27,7 +35,7 @@ def scale(x, y):
 
 
 def sample_and_scale(x, features, target, test_percentage, random_state,
-                     sample_only=False):
+                     method="standard"):
     """
     Sample and scale the data for the learning process and return the scaled
     data and the scalers used in the process.
@@ -40,8 +48,9 @@ def sample_and_scale(x, features, target, test_percentage, random_state,
         test_percentage (float): Percentage of data to use for testing.
         random_state (np.random.Generator or None): The random state to use for
             the sampling.
-        sample_only (bool): Only sample and do not scale the values.
-            Defaults to False.
+        method (str): The method to use for the scaling, e.g. standard or
+            minmax. If method is None, no scaling is applied. Defaults to
+            'standard'.
 
     Returns:
         tuple: The scalers and the scaled values.
@@ -55,18 +64,12 @@ def sample_and_scale(x, features, target, test_percentage, random_state,
     x_test = test[features].to_numpy(dtype=float)
     y_test = test[target].to_numpy(dtype=float)
 
-    if sample_only:
+    if method is None:
         return None, (x_train, y_train, x_test, y_test)
 
-    feature_scaler = StandardScaler()
-    target_scaler = StandardScaler()
-    feature_scaler.fit(x_train)
-    x_scaled = feature_scaler.transform(x_train)
+    scalers, scaled_values = scale(x_train, y_train, method)
+    feature_scaler, target_scaler = scalers
+    x_scaled, y_scaled = scaled_values
     x_test_scaled = feature_scaler.transform(x_test)
-    if len(y_train.shape) == 1:
-        y_train = y_train.reshape(-1, 1)
-    target_scaler.fit(y_train)
-    y_scaled = target_scaler.transform(y_train)
     y_test_scaled = target_scaler.transform(y_test)
-    return ((feature_scaler, target_scaler),
-            (x_scaled, y_scaled, x_test_scaled, y_test_scaled))
+    return scalers, (x_scaled, y_scaled, x_test_scaled, y_test_scaled)

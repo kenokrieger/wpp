@@ -26,7 +26,7 @@ from zephyros._utils import sample_and_scale
 
 def learn_and_predict(learn_data, predict_data, features, target,
                       test_percentage=0.33, seed=None, scale=True,
-                      config=None):
+                      scale_method="standard", config=None):
     """
     Convenience function combining ann_predictor.learn and ann_predictor.predict
     into a single function. Given feature values and a target to predict, learn
@@ -42,6 +42,9 @@ def learn_and_predict(learn_data, predict_data, features, target,
         seed(int or None): Set a seed for the sampling of test data for
             reproducibility. Defaults to None.
         scale (bool): Scale the in- and output values. Defaults to True.
+        scale_method (str): The method to use for the feature and target
+            scaling, e.g. standard or minmax. If scale_method is None, no
+            scaling is applied. Defaults to 'standard'.
         config (dict): A configuration for the structure of the neural network
             and the learning process.
 
@@ -55,13 +58,14 @@ def learn_and_predict(learn_data, predict_data, features, target,
     model, scaler = learn(learn_data, features, target,
                           test_percentage=test_percentage,
                           random_state=random_state,
-                          scale=scale, config=config)
+                          scale_method=scale_method,
+                          config=config)
     x_pred = predict_data[features].to_numpy(dtype=float)
     return predict(model, scaler, x_pred)
 
 
 def learn(x, features, target, test_percentage=0.33, random_state=None,
-          scale=True, config=None):
+          scale_method="standard", config=None):
     """
     Args:
         x(pandas.DataFrame): The data to use for learning a model.
@@ -71,6 +75,9 @@ def learn(x, features, target, test_percentage=0.33, random_state=None,
         random_state(np.random.Generator or None): Random generator for the
             sampling.
         scale (bool): Scale the in- and output values. Defaults to True.
+        scale_method (str): The method to use for the feature and target
+            scaling, e.g. standard or minmax. If scale_method is None, no
+            scaling is applied. Defaults to 'standard'.
         config (dict or None): A configuration for the structure of the neural
             network and the learning process. Defaults to None.
 
@@ -93,8 +100,7 @@ def learn(x, features, target, test_percentage=0.33, random_state=None,
         default_config.update(config)
     config = default_config
     scaler, values = sample_and_scale(x, features, target, test_percentage,
-                                      random_state, sample_only=not scale)
-
+                                      random_state, method=scale_method)
     model = Sequential([Dense(**c) for c in config["layers"]])
     model.compile(**config["compile"])
 
