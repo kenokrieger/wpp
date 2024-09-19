@@ -165,7 +165,7 @@ def single_learn(learn_data, features, target, test_percentage, random_state,
 
 
 def learn(x, features, target, test_percentage=0.33,
-          random_state=1, xgboost_options=None):
+          random_state=1, xgboost_options=None, scale=True):
     """
 
     Args:
@@ -175,6 +175,7 @@ def learn(x, features, target, test_percentage=0.33,
         test_percentage (float): Percentage of *x* to use for testing.
         random_state (np.random.Generator): Random generator for the sampling.
         xgboost_options (dict): Options to pass to xgboost.XGBRegressor.
+        scale (bool): Scale the feature and target values. Defaults to True.
 
     Returns:
         xgboost.XGBRegressor: The learned model.
@@ -185,7 +186,8 @@ def learn(x, features, target, test_percentage=0.33,
         options.update(xgboost_options)
 
     scaler, values = sample_and_scale(x, features, target, test_percentage,
-                                      random_state)
+                                      random_state,
+                                      method="standard" if scale else None)
     reg = xgboost.XGBRegressor(**options)
     reg.fit(values[0], values[1], eval_set=[values[2:]], verbose=100)
     return reg, scaler
