@@ -16,11 +16,11 @@ Confirm that the examples are not throwing any errors.
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import matplotlib.pyplot as plt
 
-from zephyros.examples import get_sample_data, plot_prediction
-
 
 def test_physical_predictor_example():
+    from zephyros.sample_data import get_sample_data
     from zephyros.physical_predictor import predict
+    from zephyros.examples import plot_prediction
     # use 500 example values
     x = get_sample_data().iloc[10_000:10_500]
     y, uy = predict(x)
@@ -30,29 +30,10 @@ def test_physical_predictor_example():
     assert True
 
 
-def test_empirical_predictor_example():
-    from zephyros.empirical_predictor import (learn_and_predict, PREDICT_KEY,
-                                              UNCERTAINTY_KEY)
-    x = get_sample_data()
-    nrows = x.shape[0]
-    # use 99 % of data for "learning"
-    learn_predict_split = int(0.99 * nrows)
-    learn_data = x.iloc[:learn_predict_split]
-    predict_data = x.iloc[learn_predict_split:]
-    features = ["wind_speed", "temperature"]
-    target = ["power_measured"]
-    y = learn_and_predict(learn_data, predict_data,
-                          features, target, accuracy=12)
-    plot_values = (y, y[PREDICT_KEY] - y[UNCERTAINTY_KEY],
-                   y[PREDICT_KEY] + y[UNCERTAINTY_KEY])
-    fig, ax = plot_prediction(y.index, plot_values, predict_data["power_measured"],
-                              title="Power Prediction based on Historically Measured Values",
-                              xlabel="Time index", ylabel="Power in kW")
-    assert True
-
-
-def test_svm_predictor_example():
-    from zephyros import svm_predictor
+def test_svr_predictor_example():
+    from zephyros.sample_data import get_sample_data
+    from zephyros.svr_predictor import learn_and_predict
+    from zephyros.examples import plot_prediction
     x = get_sample_data()
     nrows = x.shape[0]
     # use 99 % of data for learning
@@ -61,8 +42,8 @@ def test_svm_predictor_example():
     predict_data = x.iloc[learn_predict_split:]
     features = ["wind_speed", "temperature"]
     target = ["power_measured"]
-    y = svm_predictor.learn_and_predict(learn_data, predict_data,
-                                        features, target)
+    y = learn_and_predict(learn_data, predict_data,
+                          features, target)
     fig, ax = plot_prediction(predict_data.index, (y, ),
                               predict_data["power_measured"],
                               title="Power Prediction using SVR",
@@ -70,8 +51,10 @@ def test_svm_predictor_example():
     assert True
 
 
-def test_rvm_predictor_example():
-    from zephyros.rvm_predictor import learn_and_predict
+def test_rvr_predictor_example():
+    from zephyros.sample_data import get_sample_data
+    from zephyros.rvr_predictor import learn_and_predict
+    from zephyros.examples import plot_prediction
     x = get_sample_data().iloc[:2_000]
     nrows = x.shape[0]
     # use 99 % of data for learning
@@ -83,16 +66,17 @@ def test_rvm_predictor_example():
     y, std_y = learn_and_predict(learn_data, predict_data, features, target)
 
     fig, ax = plot_prediction(predict_data.index,
-                              (y, y - std_y, y + std_y),
+                              (y, y - 2 * std_y, y + 2 * std_y),
                               predict_data["power_measured"],
                               title="Power Prediction using RVM",
                               xlabel="Time index", ylabel="Power in kW")
-
     assert True
 
 
-def test_boost_predictor_example():
-    from zephyros.boost_predictor import learn_and_predict
+def test_xgb_predictor_example():
+    from zephyros.sample_data import get_sample_data
+    from zephyros.xgb_predictor import learn_and_predict
+    from zephyros.examples import plot_prediction
     x = get_sample_data()
     nrows = x.shape[0]
     # use 99 % of data for learning
@@ -101,13 +85,11 @@ def test_boost_predictor_example():
     predict_data = x.iloc[learn_predict_split:]
     features = ["wind_speed", "temperature"]
     target = ["power_measured"]
-    # predict with 1 cross validation
-    y, ly, uy = learn_and_predict(learn_data, predict_data, features, target,
-                                  xvalidate=1)
-    # average the results of each cross validation
-    y = y.mean(axis=0)
-    ly = ly.mean(axis=0)
-    uy = uy.mean(axis=0)
+    y = learn_and_predict(learn_data, predict_data, features, target).ravel()
+    uy = learn_and_predict(learn_data, predict_data, features, target,
+                           xgboost_options={"objective": "reg:quantileerror", "quantile_alpha": 0.95}).ravel()
+    ly = learn_and_predict(learn_data, predict_data, features, target,
+                           xgboost_options={"objective": "reg:quantileerror", "quantile_alpha": 0.05}).ravel()
     # visualise the results
     fig, ax = plot_prediction(predict_data.index, (y, ly, uy),
                               predict_data["power_measured"],
@@ -117,7 +99,10 @@ def test_boost_predictor_example():
 
 
 def ann_predictor_example():
+    import numpy as np
+    from zephyros.sample_data import get_sample_data
     from zephyros.ann_predictor import learn_and_predict
+    from zephyros.examples import plot_prediction
     x = get_sample_data()
     nrows = x.shape[0]
     learn_predict_split = int(0.999 * nrows)
@@ -125,10 +110,26 @@ def ann_predictor_example():
     predict_data = x.iloc[learn_predict_split:]
     features = ["wind_speed", "temperature"]
     target = ["power_measured"]
-    y = learn_and_predict(learn_data, predict_data, features, target)
-    y = y.mean(axis=0)
+
+    config = {
+        # layers of the model
+        "layers": [
+            {"units": 50, "kernel_initializer": "normal", "activation": "sigmoid"},
+            {"units": 25, "kernel_initializer": "normal", "activation": "sigmoid"},
+            {"units": 2, "kernel_initializer": "normal"},
+        ],
+        # options for compiling the model
+        "compile": {"loss": "loglikelihood", "optimizer": "adam"},
+        # callbacks and their respective options
+        "callbacks": {"EarlyStopping": {"monitor": "val_loss", "patience": 5}},
+        # options for the learning process
+        "options": {"batch_size": 200, "epochs": 1_000, "verbose": 1}
+    }
+
+    y = learn_and_predict(learn_data, predict_data, features, target, config=config)
     # visualise the results
-    fig, ax = plot_prediction(predict_data.index, (y, ),
+    fig, ax = plot_prediction(predict_data.index,
+                              (y[:, 0], y[: , 0] - 2 * np.sqrt(y[:, 1]), y[:, 0] + 2 * np.sqrt(y[:, 1])),
                               predict_data["power_measured"],
                               title="Power Prediction with ANN",
                               xlabel="Time index", ylabel="Power in kW")

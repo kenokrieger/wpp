@@ -19,7 +19,7 @@ import numpy as np
 import pandas as pd
 
 
-def predict(x):
+def predict(x: pd.DataFrame|dict) -> tuple:
     """
     Perform physical calculations to predict the power output of a wind turbine
     given ambient temperature $T$ in Degree Celsius, rotor radius $R$ in m,
@@ -56,7 +56,7 @@ def predict(x):
     return power, delta_power
 
 
-def _catch_missing_keys(x):
+def _catch_missing_keys(x: pd.DataFrame|dict) -> None:
     """
     Check if all necessary keys for the calculations are present and, if not,
     raise a key error specifying which keys are missing.
@@ -105,7 +105,8 @@ def _catch_missing_keys(x):
         raise KeyError(err_msg)
 
 
-def _calculate_rho(temperature, delta_t):
+def _calculate_rho(temperature: float|np.ndarray|pd.Series,
+                   delta_t:float|np.ndarray|pd.Series) -> tuple:
     """
     Approximate the air density rho by linearly interpolating between the values
     given in reference [1]. Air pressure is assumed to be 1 bar and the air is
@@ -117,7 +118,7 @@ def _calculate_rho(temperature, delta_t):
 
     Args:
         temperature (float or np.ndarray or pd.Series): Temperature in Degree Celsius.
-        delta_t (float or pd.Series): The uncertainty of the temperature
+        delta_t (float or np.ndarray or pd.Series): The uncertainty of the temperature
             in Degree Celsius.
 
     Returns:
@@ -134,7 +135,7 @@ def _calculate_rho(temperature, delta_t):
     return pd.Series(rho, index=index), pd.Series(delta_rho, index=index)
 
 
-def _calculate_single_rho(temperature, delta_t):
+def _calculate_single_rho(temperature: float, delta_t: float) -> tuple:
     """
     Approximate the air density rho by linearly interpolating between the values
     given in reference [1]. Air pressure is assumed to be 1 bar and the air is
@@ -175,8 +176,9 @@ def _calculate_single_rho(temperature, delta_t):
     return rho, delta_rho
 
 
-def _calculate_power(rotor_radius, capacity_factor, air_density, wind_speed,
-                     nominal_power):
+def _calculate_power(rotor_radius: float|np.ndarray|pd.Series, capacity_factor: float|np.ndarray|pd.Series,
+                     air_density: float|np.ndarray|pd.Series, wind_speed: float|np.ndarray|pd.Series,
+                     nominal_power: float|np.ndarray|pd.Series) ->  float|np.ndarray|pd.Series:
     """
     Calculate the power output with the formula given in reference [1].
 
@@ -207,8 +209,14 @@ def _calculate_power(rotor_radius, capacity_factor, air_density, wind_speed,
     return power
 
 
-def _calculate_delta_power(rotor_radius, capacity_factor, air_density,
-                           wind_speed, delta_r, delta_c, delta_rho, delta_v):
+def _calculate_delta_power(rotor_radius: float|np.ndarray|pd.Series,
+                           capacity_factor: float|np.ndarray|pd.Series,
+                           air_density: float|np.ndarray|pd.Series,
+                           wind_speed: float|np.ndarray|pd.Series,
+                           delta_r: float|np.ndarray|pd.Series,
+                           delta_c: float|np.ndarray|pd.Series,
+                           delta_rho: float|np.ndarray|pd.Series,
+                           delta_v: float|np.ndarray|pd.Series) -> float|np.ndarray|pd.Series:
     """
     Calculate the uncertainty of the power output prediction using the rules
     of uncertainty propagation.

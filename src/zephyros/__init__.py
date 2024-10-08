@@ -18,9 +18,8 @@ calculations to machine learning.
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from zephyros import physical_predictor
-from zephyros import empirical_predictor
-from zephyros import svm_predictor
-from zephyros import rvm_predictor
-from zephyros import boost_predictor
+from zephyros import svr_predictor
+from zephyros import rvr_predictor
+from zephyros import xgb_predictor
 from zephyros import ann_predictor
 from zephyros import examples

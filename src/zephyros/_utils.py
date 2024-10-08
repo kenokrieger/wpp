@@ -1,7 +1,25 @@
+"""
+Module containing utility functions for scaling and sampling data.
+"""
+# Copyright (C) 2024  Keno Krieger <kriegerk@uni-bremen.de>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+import numpy as np
+import pandas as pd
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 
-def scale(x, y, method="standard"):
+def scale(x: np.ndarray, y: np.ndarray, method:str|None="standard") -> tuple:
     """
     Scale the data for the learning process and return the scaled
     data and the scalers used in the process.
@@ -34,8 +52,9 @@ def scale(x, y, method="standard"):
     return (feature_scaler, target_scaler), (x_scaled, y_scaled)
 
 
-def sample_and_scale(x, features, target, test_percentage, random_state,
-                     method="standard"):
+def sample_and_scale(x: pd.DataFrame, features: list, target: list, test_percentage: float,
+                     random_state: np.random.Generator|int|None,
+                     method:str|None="standard") -> tuple:
     """
     Sample and scale the data for the learning process and return the scaled
     data and the scalers used in the process.

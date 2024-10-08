@@ -28,32 +28,30 @@ in the top-level directory to install the package.
 ### About the modules
 
 All the machine learning modules
-(`zephyros.svm_predictor`, `zephyros.rvm_predictor`,
-`zephyros.boost_predictor`, `zephyros.ann_predictor`)
+(`zephyros.svr_predictor`, `zephyros.rvr_predictor`,
+`zephyros.xgb_predictor`, `zephyros.ann_predictor`)
 are wrappers for existing libraries. Their functions are to be understood
-as convenience functions (see [Examples](%22#Examples%22) below). In the
-following the customisation options for each module will be explained.
+as convenience functions (see [Examples](#Examples) below). In the
+following the customisation options for each module are going to be explained.
 
-#### zephyros.svm_predictor
+#### zephyros.svr_predictor
 
-By default the `svm_predictor` module use the
+By default the `svr_predictor` module use the
 [sklearn.svm.SVR](https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVR.html#sklearn.svm.SVR)
 regressor. Options can be passed to the regressor by using the `svr_options`
 parameter. For the option `kernel='fast-linear'` the
 [sklearn.svm.LinearSVR](https://scikit-learn.org/stable/modules/generated/sklearn.svm.LinearSVR.html#sklearn.svm.LinearSVR)
-regressor will be used instead. Additionally, if desired, it can use the
-[sklearn.ensemble.BaggingRegressor](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.BaggingRegressor.html)
-using the `bagging_options` parameter with `n_estimators > 1`.
+regressor will be used instead.
 
-#### zephyros.rvm_predictor
+#### zephyros.rvr_predictor
 
-The `rvm_predictor` uses the
+The `rvr_predictor` uses the
 [sklearn_rvm.em_rvm.EMRVR](https://sklearn-rvm.readthedocs.io/en/latest/generated/sklearn_rvm.em_rvm.EMRVR.html)
 regressor. It can be configured using the `rvm_options` parameter.
 
-#### zephyros.boost_predictor
+#### zephyros.xgb_predictor
 
-The `boost_predictor` uses the
+The `xgb_predictor` uses the
 [xgboost.XGBRegressor](https://xgboost.readthedocs.io/en/stable/python/python_api.html#module-xgboost.sklearn).
 It can be configured using the `xgboost_options` parameter.
 
@@ -63,6 +61,8 @@ The `ann_predictor` is a wrapper for `keras`. Here, not only options can
 be passed but also a configuration of dense layers. For example
 
 ```python
+import zephyros.ann_predictor
+
 config = {
     # layers of the model
     "layers": [
@@ -79,15 +79,21 @@ config = {
     # options for the learning process
     "options": {"batch_size": 200, "epochs": 1_000, "verbose": 1}
 }
+zephyros.ann_predictor.learn_and_predict(*args, config=config)
 ```
+Two custom loss functions are implemented, namely quantile loss and negative log likelihood loss. They can be used by 
+passing `"loss": "quantile"` and `"loss": "loglikelihood"` in the configuration respectively. When using quantile loss,
+the `quantile_alpha` needs to be specified as well, e.g. `config["compile"]["quantile_alpha"] = 0.95`.
+
 
 ### Examples
 
 #### Example 1: Use the physical prediction method
 
 ```python
-from zephyros.examples import get_sample_data, plot_prediction
+from zephyros.sample_data import get_sample_data
 from zephyros.physical_predictor import predict
+from zephyros.examples import plot_prediction
 
 # use 500 example values
 x = get_sample_data().iloc[10_000:10_500]
@@ -98,36 +104,13 @@ fig, ax = plot_prediction(x.index, (y, y - uy, y + uy), x["power_measured"],
 plt.show()
 ```
 
-#### Example 2: Use the empirical prediction method
+
+#### Example 2: Use Support Vector Regression
 
 ```python
-from zephyros.examples import get_sample_data, plot_prediction
-from zephyros.empirical_predictor import (learn_and_predict, PREDICT_KEY,
-                                              UNCERTAINTY_KEY)
-
-x = get_sample_data()
-nrows = x.shape[0]
-# use 99 % of data for "learning"
-learn_predict_split = int(0.99 * nrows)
-learn_data = x.iloc[:learn_predict_split]
-predict_data = x.iloc[learn_predict_split:]
-features = ["wind_speed", "temperature"]
-target = ["power_measured"]
-y = learn_and_predict(learn_data, predict_data,
-                      features, target, accuracy=12)
-plot_values = (y, y[PREDICT_KEY] - y[UNCERTAINTY_KEY],
-               y[PREDICT_KEY] + y[UNCERTAINTY_KEY])
-fig, ax = plot_prediction(y.index, plot_values, predict_data["power_measured"],
-                          title="Power Prediction based on Historically Measured Values",
-                          xlabel="Time index", ylabel="Power in kW")
-plt.show()
-```
-
-#### Example 3: Use Support Vector Regression
-
-```python
-from zephyros.examples import get_sample_data, plot_prediction
-from zephyros import svm_predictor
+from zephyros.sample_data import get_sample_data
+from zephyros.svr_predictor import learn_and_predict
+from zephyros.examples import plot_prediction
 
 x = get_sample_data()
 nrows = x.shape[0]
@@ -137,8 +120,8 @@ learn_data = x.iloc[:learn_predict_split]
 predict_data = x.iloc[learn_predict_split:]
 features = ["wind_speed", "temperature"]
 target = ["power_measured"]
-y = svm_predictor.learn_and_predict(learn_data, predict_data,
-                                    features, target)
+y = learn_and_predict(learn_data, predict_data,
+                      features, target)
 fig, ax = plot_prediction(predict_data.index, (y, ),
                           predict_data["power_measured"],
                           title="Power Prediction using SVR",
@@ -146,11 +129,12 @@ fig, ax = plot_prediction(predict_data.index, (y, ),
 plt.show()
 ```
 
-#### Example 4: Use Relevance Vector Regression
+#### Example 3: Use Relevance Vector Regression
 
 ```python
-from zephyros.examples import get_sample_data, plot_prediction
-from zephyros.rvm_predictor import learn_and_predict
+from zephyros.sample_data import get_sample_data
+from zephyros.rvr_predictor import learn_and_predict
+from zephyros.examples import plot_prediction
 
 x = get_sample_data().iloc[:2_000]
 nrows = x.shape[0]
@@ -163,20 +147,19 @@ target = ["power_measured"]
 y, std_y = learn_and_predict(learn_data, predict_data, features, target)
 
 fig, ax = plot_prediction(predict_data.index,
-                          (y, y - std_y, y + std_y),
+                          (y, y - 2 * std_y, y + 2 * std_y),
                           predict_data["power_measured"],
                           title="Power Prediction using RVM",
                           xlabel="Time index", ylabel="Power in kW")
-
-
 plt.show()
 ```
 
-#### Example 5: Use Extreme Gradient Boosting (xgboost package)
+#### Example 4: Use Extreme Gradient Boosting (xgboost package)
 
 ```python
-from zephyros.examples import get_sample_data, plot_prediction
-from zephyros.boost_predictor import learn_and_predict
+from zephyros.sample_data import get_sample_data
+from zephyros.xgb_predictor import learn_and_predict
+from zephyros.examples import plot_prediction
 
 x = get_sample_data()
 nrows = x.shape[0]
@@ -186,13 +169,11 @@ learn_data = x.iloc[:learn_predict_split]
 predict_data = x.iloc[learn_predict_split:]
 features = ["wind_speed", "temperature"]
 target = ["power_measured"]
-# predict with 1 cross validation
-y, ly, uy = learn_and_predict(learn_data, predict_data, features, target,
-                              xvalidate=1)
-# average the results of each cross validation
-y = y.mean(axis=0)
-ly = ly.mean(axis=0)
-uy = uy.mean(axis=0)
+y = learn_and_predict(learn_data, predict_data, features, target).ravel()
+uy = learn_and_predict(learn_data, predict_data, features, target,
+                       xgboost_options={"objective": "reg:quantileerror", "quantile_alpha": 0.95}).ravel()
+ly = learn_and_predict(learn_data, predict_data, features, target,
+                       xgboost_options={"objective": "reg:quantileerror", "quantile_alpha": 0.05}).ravel()
 # visualise the results
 fig, ax = plot_prediction(predict_data.index, (y, ly, uy),
                           predict_data["power_measured"],
@@ -201,11 +182,12 @@ fig, ax = plot_prediction(predict_data.index, (y, ly, uy),
 plt.show()
 ```
 
-#### Example 6: Use Artificial Neural Networks
+#### Example 5: Use Artificial Neural Network
 
 ```python
-from zephyros.examples import get_sample_data, plot_prediction
+from zephyros.sample_data import get_sample_data
 from zephyros.ann_predictor import learn_and_predict
+from zephyros.examples import plot_prediction
 x = get_sample_data()
 nrows = x.shape[0]
 learn_predict_split = int(0.999 * nrows)
@@ -213,11 +195,26 @@ learn_data = x.iloc[:learn_predict_split]
 predict_data = x.iloc[learn_predict_split:]
 features = ["wind_speed", "temperature"]
 target = ["power_measured"]
-y = learn_and_predict(learn_data, predict_data, features, target)
-# learn and predict returns a column vector
-y = y.mean(axis=0)
+
+config = {
+    # layers of the model
+    "layers": [
+        {"units": 50, "kernel_initializer": "normal", "activation": "sigmoid"},
+        {"units": 25, "kernel_initializer": "normal", "activation": "sigmoid"},
+        {"units": 2, "kernel_initializer": "normal"},
+    ],
+    # options for compiling the model
+    "compile": {"loss": "loglikelihood", "optimizer": "adam"},
+    # callbacks and their respective options
+    "callbacks": {"EarlyStopping": {"monitor": "val_loss", "patience": 5}},
+    # options for the learning process
+    "options": {"batch_size": 200, "epochs": 1_000, "verbose": 1}
+}
+
+y = learn_and_predict(learn_data, predict_data, features, target, config=config)
 # visualise the results
-fig, ax = plot_prediction(predict_data.index, (y, ),
+fig, ax = plot_prediction(predict_data.index,
+                          (y[:, 0], y[: , 0] - 2 * y[:, 1] ** 0.5, y[:, 0] + 2 * y[:, 1] ** 0.5),
                           predict_data["power_measured"],
                           title="Power Prediction with ANN",
                           xlabel="Time index", ylabel="Power in kW")
